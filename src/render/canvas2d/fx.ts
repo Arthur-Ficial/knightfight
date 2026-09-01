@@ -25,7 +25,7 @@ interface Decal {
 }
 
 const rand = (a: number, b: number): number => a + Math.random() * (b - a);
-const DECAL_CAP = 140;
+const DECAL_CAP = 60;
 
 export class FxSystem {
   private particles: Particle[] = [];
@@ -40,26 +40,26 @@ export class FxSystem {
     });
   }
 
-  sparks(x: number, y: number, n = 10): void {
+  sparks(x: number, y: number, n = 6): void {
     for (let i = 0; i < n; i += 1) {
-      this.add(x, y, i % 2 === 0 ? PALETTE.spark : PALETTE.torch0, { spread: 5, up: 5, size: rand(1.5, 3), life: rand(14, 26), grav: 0.18, blood: false });
+      this.add(x, y, i % 2 === 0 ? PALETTE.spark : PALETTE.torch0, { spread: 2.2, up: 2.4, size: rand(1, 1.6), life: rand(10, 18), grav: 0.12, blood: false });
     }
   }
 
-  blood(x: number, y: number, n = 12): void {
+  blood(x: number, y: number, n = 7): void {
     for (let i = 0; i < n; i += 1) {
-      this.add(x, y, PALETTE.blood, { spread: 4, up: 4.5, size: rand(2, 4), life: rand(20, 40), grav: 0.4, blood: true });
+      this.add(x, y, PALETTE.blood, { spread: 1.8, up: 2.2, size: rand(1, 1.8), life: rand(16, 30), grav: 0.22, blood: true });
     }
   }
 
   dust(x: number, y: number): void {
-    for (let i = 0; i < 8; i += 1) {
-      this.add(x, y, PALETTE.dust, { spread: 3, up: 1.5, size: rand(2, 5), life: rand(16, 28), grav: -0.02, blood: false });
+    for (let i = 0; i < 5; i += 1) {
+      this.add(x, y, PALETTE.dust, { spread: 1.4, up: 0.9, size: rand(1, 2), life: rand(14, 24), grav: -0.01, blood: false });
     }
   }
 
   ember(x: number, y: number): void {
-    this.add(x, y, PALETTE.ember, { spread: 0.4, up: 1.6, size: rand(1, 2.4), life: rand(60, 120), grav: -0.03, blood: false });
+    this.add(x, y, PALETTE.ember, { spread: 0.15, up: 0.7, size: rand(1, 1.4), life: rand(80, 150), grav: -0.012, blood: false });
   }
 
   update(groundY: number): void {
@@ -71,7 +71,7 @@ export class FxSystem {
       p.life -= 1;
       if (p.blood && p.y >= groundY) {
         if (this.decals.length < DECAL_CAP) {
-          this.decals.push({ x: p.x, y: groundY - 1, r: rand(2, 5), color: PALETTE.bloodDark });
+          this.decals.push({ x: p.x, y: groundY - 1, r: rand(1, 2.4), color: PALETTE.bloodDark });
         }
         continue;
       }
@@ -83,12 +83,11 @@ export class FxSystem {
   }
 
   drawDecals(ctx: CanvasRenderingContext2D): void {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = PALETTE.bloodDark;
     for (const d of this.decals) {
-      ctx.fillStyle = d.color;
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.ellipse(d.x, d.y, d.r, d.r * 0.4, 0, 0, Math.PI * 2);
-      ctx.fill();
+      const r = Math.max(1, Math.round(d.r));
+      ctx.fillRect(Math.round(d.x - r), Math.round(d.y), r * 2, 1);
     }
     ctx.globalAlpha = 1;
   }
@@ -97,7 +96,8 @@ export class FxSystem {
     for (const p of this.particles) {
       ctx.globalAlpha = Math.max(0, p.life / p.max);
       ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      const s = Math.max(1, Math.round(p.size));
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), s, s);
     }
     ctx.globalAlpha = 1;
   }

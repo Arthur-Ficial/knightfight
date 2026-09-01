@@ -1,11 +1,11 @@
 import { PALETTE, RHYTHM_WINDOW } from '../../config/index.ts';
-import { clamp01, lerp } from '../../core/math.ts';
+import { clamp01 } from '../../core/math.ts';
 import { comboChainLength } from '../../sim/combos.ts';
 import type { DuelState } from '../../sim/state.ts';
-import { sx, type View } from './view.ts';
+import type { View } from './view.ts';
 
-// Heads-up display: player + enemy vitals, the enemy telegraph ring (the read),
-// combo chain and rung. Every label is >= 16px per Franz's rule.
+// Crisp HUD overlay (drawn OVER the upscaled pixel scene so text stays legible):
+// labelled player + enemy vitals, combo chain, rung. Every label is >= 16px.
 
 const FONT = 'ui-monospace, "SF Mono", Menlo, monospace';
 
@@ -26,26 +26,6 @@ const bar = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
   ctx.fillRect(x, y, w * clamp01(frac), h);
 };
 
-const drawTelegraph = (ctx: CanvasRenderingContext2D, view: View, duel: DuelState): void => {
-  const e = duel.enemy;
-  if (e.phase !== 'telegraph' || e.move === null) {
-    return;
-  }
-  const total = Math.max(1, e.move.windup * e.telegraphMult);
-  const prog = clamp01(1 - e.timer / total);
-  const cx = sx(view, e.x);
-  const cy = view.groundY - view.h * 0.11;
-  const r = lerp(view.w * 0.16, view.w * 0.05, prog);
-  const color = e.tell === 'red' ? PALETTE.tellRed : e.tell === 'gold' ? PALETTE.tellGold : PALETTE.tellWhite;
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = 0.4 + prog * 0.6;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-};
-
 const drawCombo = (ctx: CanvasRenderingContext2D, view: View, duel: DuelState): void => {
   const chain = comboChainLength(duel.player.combo, duel.tick, RHYTHM_WINDOW);
   if (chain < 2) {
@@ -64,11 +44,10 @@ export const drawHud = (ctx: CanvasRenderingContext2D, view: View, duel: DuelSta
   bar(ctx, pad, 58, w, 6, p.rage / p.stats.maxRage, PALETTE.rage);
   bar(ctx, view.w - pad - w, 26, w, 12, e.hp / e.maxHp, PALETTE.hpEnemy);
   bar(ctx, view.w - pad - w, 44, w, 6, e.guard / e.guardMax, PALETTE.heroSteel);
-  text(ctx, e.name, view.w - pad, 78, 16, PALETTE.inkDim, 'right');
+  text(ctx, e.name, view.w - pad, 82, 16, PALETTE.inkDim, 'right');
   text(ctx, `RUNG ${duel.rung}`, view.w / 2, 34, 16, PALETTE.gold, 'center');
   if (p.riposteWindow > 0) {
-    text(ctx, 'RIPOSTE!', view.w / 2, view.h * 0.5, 24, PALETTE.parry, 'center');
+    text(ctx, 'RIPOSTE', view.w / 2, view.h * 0.56, 22, PALETTE.parry, 'center');
   }
-  drawTelegraph(ctx, view, duel);
   drawCombo(ctx, view, duel);
 };

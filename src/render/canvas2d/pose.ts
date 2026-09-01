@@ -1,11 +1,12 @@
 import { clamp01, easeOutCubic, lerp } from '../../core/math.ts';
 import { TICK_MS } from '../../core/loop.ts';
 import { CHARGE_MAX_MS } from '../../config/index.ts';
+import type { Dir4 } from '../../core/types.ts';
 import type { EnemyState, PlayerState } from '../../sim/state.ts';
 
 // Procedural animation: turn a fighter's sim state into weighty pose parameters
-// (anticipation on windup, follow-through on recovery, recoil on hit). The
-// skeleton renderer turns these into joint angles.
+// (anticipation on windup, follow-through on recovery, recoil on hit). attackDir
+// biases the arm high/low/side so the strike direction is visible.
 
 export interface Pose {
   bob: number;
@@ -17,6 +18,7 @@ export interface Pose {
   stride: number;
   charge: number;
   active: boolean;
+  attackDir: Dir4 | null;
 }
 
 const base = (tick: number): Pose => ({
@@ -29,6 +31,7 @@ const base = (tick: number): Pose => ({
   stride: 0,
   charge: 0,
   active: false,
+  attackDir: null,
 });
 
 export const computePlayerPose = (p: PlayerState, tick: number): Pose => {
@@ -62,6 +65,9 @@ export const computePlayerPose = (p: PlayerState, tick: number): Pose => {
     return pose;
   }
   applyAttackPose(pose, a.phase, a.timer, a.windupLen, a.activeLen, a.recoveryLen);
+  if (a.name === 'strike' || a.name === 'heavy') {
+    pose.attackDir = a.dir;
+  }
   if (a.name === 'heavy' && a.phase === 'windup') {
     pose.crouch = Math.max(pose.crouch, 0.45);
     pose.lean = Math.min(pose.lean, -0.35);
@@ -97,6 +103,9 @@ const applyAttackPose = (
 export const computeEnemyPose = (e: EnemyState, tick: number): Pose => {
   const pose = base(tick);
   const total = e.move ? Math.max(1, e.move.windup * e.telegraphMult) : 1;
+  if (e.move !== null && (e.phase === 'telegraph' || e.phase === 'active')) {
+    pose.attackDir = e.move.dir;
+  }
   if (e.phase === 'telegraph') {
     const prog = clamp01(1 - e.timer / total);
     pose.swing = -0.6 * prog;

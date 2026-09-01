@@ -2,8 +2,8 @@ import { PALETTE } from '../../config/index.ts';
 import type { Cosmetics } from '../renderer.ts';
 import type { View } from './view.ts';
 
-// Parallax torch-lit arena: sky, moon, castle wall, crowd silhouettes, banners,
-// torches with flicker. Pure drawing from the view + tick.
+// Parallax arena drawn for the low-res pixel buffer: flat colour bands (no
+// gradients), quantised banded torch/moon light (hard steps), calm and moody.
 
 export interface Circle {
   readonly x: number;
@@ -11,127 +11,114 @@ export interface Circle {
   readonly r: number;
 }
 
-export const moonCircle = (view: View): Circle => ({ x: view.w * 0.76, y: view.h * 0.16, r: view.w * 0.09 });
+const R = Math.round;
 
-const drawMoon = (ctx: CanvasRenderingContext2D, c: Circle, blood: boolean): void => {
-  const glow = ctx.createRadialGradient(c.x, c.y, c.r * 0.2, c.x, c.y, c.r * 2.4);
-  glow.addColorStop(0, blood ? PALETTE.bloodMoon : PALETTE.torch0);
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(c.x - c.r * 2.4, c.y - c.r * 2.4, c.r * 4.8, c.r * 4.8);
-  ctx.fillStyle = blood ? PALETTE.bloodMoon : PALETTE.ink;
+export const moonCircle = (view: View): Circle => ({ x: view.w * 0.74, y: view.h * 0.15, r: view.w * 0.08 });
+
+const disc = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, color: string): void => {
+  ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+  ctx.arc(R(x), R(y), R(r), 0, Math.PI * 2);
   ctx.fill();
 };
 
-const drawTower = (ctx: CanvasRenderingContext2D, x: number, top: number, w: number, h: number): void => {
-  ctx.fillStyle = PALETTE.tower;
-  ctx.fillRect(x - w / 2, top, w, h);
-  for (let i = -1; i <= 1; i += 1) {
-    ctx.fillRect(x + i * w * 0.35 - w * 0.12, top - w * 0.18, w * 0.24, w * 0.18);
+/** Concentric hard-edged light bands (outer dim -> inner bright). */
+const bandedLight = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, bands: readonly string[], alpha: number): void => {
+  ctx.globalAlpha = alpha;
+  for (let i = 0; i < bands.length; i += 1) {
+    disc(ctx, x, y, r * (1 - i / bands.length), bands[i] ?? '#000');
   }
-  ctx.fillStyle = PALETTE.torch1;
-  ctx.globalAlpha = 0.5;
-  ctx.fillRect(x - w * 0.12, top + h * 0.3, w * 0.24, w * 0.24);
   ctx.globalAlpha = 1;
 };
 
-const drawFog = (ctx: CanvasRenderingContext2D, view: View, tick: number, y: number, speed: number): void => {
-  ctx.fillStyle = PALETTE.fog;
-  const off = (tick * speed) % (view.w + 200);
-  for (let i = -1; i < 3; i += 1) {
-    const x = i * (view.w * 0.7) + off - 100;
-    ctx.beginPath();
-    ctx.ellipse(x, y, view.w * 0.4, view.h * 0.05, 0, 0, Math.PI * 2);
-    ctx.fill();
+const drawMoon = (ctx: CanvasRenderingContext2D, c: Circle, blood: boolean): void => {
+  bandedLight(ctx, c.x, c.y, c.r * 1.7, blood ? [PALETTE.dread, PALETTE.bloodMoon] : [PALETTE.stone1, PALETTE.stone2], 0.5);
+  disc(ctx, c.x, c.y, c.r, blood ? PALETTE.bloodMoon : PALETTE.inkDim);
+  disc(ctx, c.x - c.r * 0.3, c.y - c.r * 0.3, c.r * 0.5, blood ? PALETTE.foe1 : PALETTE.ink);
+};
+
+const rect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string): void => {
+  ctx.fillStyle = color;
+  ctx.fillRect(R(x), R(y), R(w), R(h));
+};
+
+const drawTower = (ctx: CanvasRenderingContext2D, x: number, top: number, w: number, h: number): void => {
+  rect(ctx, x - w / 2, top, w, h, PALETTE.tower);
+  for (let i = -1; i <= 1; i += 1) {
+    rect(ctx, x + i * w * 0.35 - w * 0.12, top - w * 0.16, w * 0.24, w * 0.16, PALETTE.tower);
   }
 };
 
-const drawWall = (ctx: CanvasRenderingContext2D, view: View): void => {
-  const top = view.h * 0.28;
-  ctx.fillStyle = PALETTE.stone0;
-  ctx.fillRect(0, top, view.w, view.groundY - top);
-  ctx.fillStyle = PALETTE.stone1;
-  for (let x = 0; x < view.w; x += 26) {
-    ctx.fillRect(x, top, 22, 12);
+const drawFog = (ctx: CanvasRenderingContext2D, view: View, tick: number, y: number, speed: number): void => {
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = PALETTE.fog;
+  const off = ((tick * speed) % (view.w + 60)) - 30;
+  for (let i = -1; i < 3; i += 1) {
+    rect(ctx, i * view.w * 0.6 + off, y, view.w * 0.5, view.h * 0.03, PALETTE.fog);
   }
-  ctx.fillStyle = PALETTE.night2;
-  for (let x = -8; x < view.w; x += 44) {
-    ctx.fillRect(x, top - 14, 20, 16);
+  ctx.globalAlpha = 1;
+};
+
+const drawWall = (ctx: CanvasRenderingContext2D, view: View): void => {
+  const top = view.h * 0.3;
+  rect(ctx, 0, top, view.w, view.groundY - top, PALETTE.stone0);
+  const step = view.w * 0.11;
+  for (let x = 0; x < view.w; x += step) {
+    rect(ctx, x, top, step * 0.8, view.h * 0.015, PALETTE.stone1);
+    rect(ctx, x, top - view.h * 0.02, step * 0.5, view.h * 0.02, PALETTE.night2);
   }
 };
 
 const drawCrowd = (ctx: CanvasRenderingContext2D, view: View, tick: number): void => {
-  const base = view.groundY - view.h * 0.16;
-  ctx.fillStyle = PALETTE.crowd;
-  for (let x = 0; x < view.w + 20; x += 18) {
-    const sway = Math.sin(tick * 0.05 + x) * 1.5;
-    ctx.beginPath();
-    ctx.arc(x, base + sway, 10, Math.PI, 0);
-    ctx.fill();
+  const base = view.groundY - view.h * 0.15;
+  const step = view.w * 0.06;
+  for (let x = 0; x < view.w + step; x += step) {
+    const sway = Math.round(Math.sin(tick * 0.02 + x) * 1) ;
+    disc(ctx, x, base + sway, view.w * 0.028, PALETTE.crowd);
   }
 };
 
 const drawBanners = (ctx: CanvasRenderingContext2D, view: View): void => {
-  const y = view.h * 0.3;
-  for (const fx of [0.2, 0.5, 0.86]) {
+  const y = view.h * 0.32;
+  for (const fx of [0.28, 0.72]) {
     const x = view.w * fx;
+    const w = view.w * 0.05;
     ctx.fillStyle = PALETTE.banner;
     ctx.beginPath();
-    ctx.moveTo(x - 12, y);
-    ctx.lineTo(x + 12, y);
-    ctx.lineTo(x, y + 42);
+    ctx.moveTo(R(x - w), R(y));
+    ctx.lineTo(R(x + w), R(y));
+    ctx.lineTo(R(x), R(y + view.h * 0.05));
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = PALETTE.gold;
-    ctx.fillRect(x - 2, y + 8, 4, 4);
   }
 };
 
-const drawTorch = (ctx: CanvasRenderingContext2D, x: number, y: number, tick: number): void => {
-  const flick = 0.75 + Math.sin(tick * 0.4 + x) * 0.12 + Math.sin(tick * 1.3) * 0.08;
-  const g = ctx.createRadialGradient(x, y, 2, x, y, 60 * flick);
-  g.addColorStop(0, PALETTE.torch0);
-  g.addColorStop(0.4, PALETTE.torch1);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(x - 60, y - 60, 120, 120);
-  ctx.fillStyle = PALETTE.torch2;
-  ctx.fillRect(x - 2, y, 4, 26);
+const drawTorch = (ctx: CanvasRenderingContext2D, view: View, x: number, y: number, tick: number): void => {
+  const flick = Math.floor((tick * 0.15 + x) % 2) === 0 ? 1 : 0.85;
+  bandedLight(ctx, x, y, view.w * 0.11 * flick, [PALETTE.torch2, PALETTE.torch1, PALETTE.torch0], 0.4);
+  rect(ctx, x - view.w * 0.006, y, view.w * 0.012, view.h * 0.03, PALETTE.torch2);
 };
 
 export const drawBackground = (ctx: CanvasRenderingContext2D, view: View, cos: Cosmetics, tick: number): void => {
-  const sky = ctx.createLinearGradient(0, 0, 0, view.groundY);
-  sky.addColorStop(0, cos.bloodMoon ? '#1a0a0e' : PALETTE.night0);
-  sky.addColorStop(1, PALETTE.night2);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, view.w, view.h);
+  rect(ctx, 0, 0, view.w, view.groundY, cos.bloodMoon ? PALETTE.night0 : PALETTE.night1);
+  rect(ctx, 0, view.h * 0.18, view.w, view.groundY - view.h * 0.18, PALETTE.night2);
   drawMoon(ctx, moonCircle(view), cos.bloodMoon);
-  drawTower(ctx, view.w * 0.08, view.h * 0.12, view.w * 0.16, view.h * 0.2);
-  drawTower(ctx, view.w * 0.9, view.h * 0.08, view.w * 0.2, view.h * 0.24);
+  drawTower(ctx, view.w * 0.1, view.h * 0.13, view.w * 0.14, view.h * 0.19);
+  drawTower(ctx, view.w * 0.9, view.h * 0.1, view.w * 0.16, view.h * 0.22);
   drawWall(ctx, view);
   drawBanners(ctx, view);
   drawCrowd(ctx, view, tick);
-  drawFog(ctx, view, tick, view.groundY - view.h * 0.05, 0.25);
-  drawTorch(ctx, view.w * 0.12, view.groundY - view.h * 0.12, tick);
-  drawTorch(ctx, view.w * 0.88, view.groundY - view.h * 0.12, tick);
-  const floor = ctx.createLinearGradient(0, view.groundY, 0, view.h);
-  floor.addColorStop(0, PALETTE.stone2);
-  floor.addColorStop(1, PALETTE.night1);
-  ctx.fillStyle = floor;
-  ctx.fillRect(0, view.groundY, view.w, view.h - view.groundY);
+  drawFog(ctx, view, tick, view.groundY - view.h * 0.04, 0.12);
+  drawTorch(ctx, view, view.w * 0.12, view.groundY - view.h * 0.11, tick);
+  drawTorch(ctx, view, view.w * 0.88, view.groundY - view.h * 0.11, tick);
+  rect(ctx, 0, view.groundY, view.w, view.h * 0.06, PALETTE.stone2);
+  rect(ctx, 0, view.groundY + view.h * 0.06, view.w, view.h, PALETTE.night1);
 };
 
 export const drawForeground = (ctx: CanvasRenderingContext2D, view: View, tick: number): void => {
-  drawFog(ctx, view, tick, view.h * 0.9, -0.4);
-  ctx.fillStyle = PALETTE.night0;
-  const base = view.h;
-  for (let x = -10; x < view.w + 30; x += 34) {
-    const h = view.h * 0.09 + Math.sin(x * 0.7) * view.h * 0.02;
-    ctx.beginPath();
-    ctx.arc(x, base + h - view.h * 0.02, 20, Math.PI, 0);
-    ctx.fill();
-    ctx.fillRect(x - 20, base, 40, 4);
+  drawFog(ctx, view, tick, view.h * 0.92, -0.18);
+  const step = view.w * 0.09;
+  for (let x = -step; x < view.w + step; x += step) {
+    disc(ctx, x, view.h + view.h * 0.03, view.w * 0.05, PALETTE.night0);
   }
 };

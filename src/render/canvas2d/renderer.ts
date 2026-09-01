@@ -4,6 +4,7 @@ import type { DuelState, SimEvent } from '../../sim/state.ts';
 import type { Renderer, RenderView } from '../renderer.ts';
 import { makeView, sx, type View } from './view.ts';
 import { drawBackground, drawForeground } from './background.ts';
+import { drawWorldIndicators } from './indicators.ts';
 import { drawHud } from './hud.ts';
 import { applyPost } from './post.ts';
 import { FxSystem } from './fx.ts';
@@ -13,12 +14,23 @@ import { computePlayerPose, computeEnemyPose } from './pose.ts';
 import { drawKnight } from './knight.ts';
 import { visualFor, HERO_VISUAL, HERO_CHICKEN } from './style.ts';
 
+// Real pixel art: the whole scene is drawn into a small offscreen buffer and
+// integer-upscaled with smoothing OFF, so one chunky pixel size covers knights,
+// background and FX. Only the HUD text is drawn crisp on top (16px legibility).
+
 const FONT = 'ui-monospace, "SF Mono", Menlo, monospace';
+const TARGET_BUFFER_W = 208;
 
 export class Canvas2DRenderer implements Renderer {
-  private readonly ctx: CanvasRenderingContext2D;
-  private w = 0;
-  private h = 0;
+  private readonly dctx: CanvasRenderingContext2D;
+  private readonly buffer: HTMLCanvasElement;
+  private readonly bctx: CanvasRenderingContext2D;
+  private cssW = 0;
+  private cssH = 0;
+  private bw = 0;
+  private bh = 0;
+  private pix = 4;
+  private ratio = 1;
   private readonly fx = new FxSystem();
   private readonly heroCape = new Cape();
   private readonly foeCape = new Cape();
@@ -36,18 +48,33 @@ export class Canvas2DRenderer implements Renderer {
     if (ctx === null) {
       throw new Error('2d canvas context unavailable');
     }
-    this.ctx = ctx;
+    this.dctx = ctx;
+    this.buffer = document.createElement('canvas');
+    const bctx = this.buffer.getContext('2d');
+    if (bctx === null) {
+      throw new Error('2d buffer context unavailable');
+    }
+    this.bctx = bctx;
+    canvas.style.imageRendering = 'pixelated';
   }
 
   resize(width: number, height: number): void {
-    this.w = width;
-    this.h = height;
-    const ratio = dpr();
-    this.canvas.width = Math.round(width * ratio);
-    this.canvas.height = Math.round(height * ratio);
+    this.cssW = width;
+    this.cssH = height;
+    this.ratio = dpr();
+    const physW = Math.round(width * this.ratio);
+    const physH = Math.round(height * this.ratio);
+    this.pix = Math.max(3, Math.round(physW / TARGET_BUFFER_W));
+    this.bw = Math.max(1, Math.round(physW / this.pix));
+    this.bh = Math.max(1, Math.round(physH / this.pix));
+    this.canvas.width = physW;
+    this.canvas.height = physH;
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
-    this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    this.buffer.width = this.bw;
+    this.buffer.height = this.bh;
+    this.bctx.imageSmoothingEnabled = false;
+    this.dctx.imageSmoothingEnabled = false;
   }
 
   private reactToEvents(view: View, duel: DuelState, events: readonly SimEvent[]): void {
@@ -55,22 +82,22 @@ export class Canvas2DRenderer implements Renderer {
       const x = sx(view, ev.x ?? duel.enemy.x);
       const y = view.groundY - view.h * 0.14;
       if (ev.kind === 'parry' || ev.kind === 'riposte') {
-        this.fx.sparks(x, y, 26);
-        this.flash = Math.max(this.flash, 0.5);
+        this.fx.sparks(x, y, 12);
+        this.flash = Math.max(this.flash, 0.4);
       } else if (ev.kind === 'playerHit') {
         this.fx.blood(x, y);
-        this.fx.sparks(x, y, 10);
-        this.flash = Math.max(this.flash, 0.25);
+        this.fx.sparks(x, y, 5);
+        this.flash = Math.max(this.flash, 0.22);
       } else if (ev.kind === 'enemyHitPlayer') {
         this.fx.blood(sx(view, duel.player.x), y);
       } else if (ev.kind === 'guardBreak' || ev.kind === 'blockBreak') {
-        this.fx.sparks(x, y, 24);
-        this.flash = Math.max(this.flash, 0.4);
+        this.fx.sparks(x, y, 12);
+        this.flash = Math.max(this.flash, 0.3);
       } else if (ev.kind === 'dodge') {
         this.fx.dust(sx(view, ev.x ?? duel.player.x), view.groundY);
       } else if (ev.kind === 'kill') {
-        this.fx.blood(x, y, 34);
-        this.flash = Math.max(this.flash, 0.7);
+        this.fx.blood(x, y, 18);
+        this.flash = Math.max(this.flash, 0.5);
       }
     }
   }
@@ -89,14 +116,14 @@ export class Canvas2DRenderer implements Renderer {
     const x = sx(view, state.x);
     const facing = hero ? 1 : -1;
     const cape = hero ? this.heroCape : this.foeCape;
-    cape.update(x - facing * 10 * s, view.groundY - 96 * s, -facing * (1.2 + pose.lean * 3), 12 * s);
-    const feet = (hero ? this.heroLegs : this.foeLegs).update(x, 14 * s);
-    const r = drawKnight(this.ctx, {
+    cape.update(x - facing * 4 * s, view.groundY - 96 * s, -facing * (0.6 + pose.lean * 1.6), 12 * s);
+    const feet = (hero ? this.heroLegs : this.foeLegs).update(x, 12 * s);
+    const r = drawKnight(this.bctx, {
       x, groundY: view.groundY, facing, scale: s, pose, visual, cape: cape.points(), feet, chicken: hero && this.chicken,
     });
     if (hero && r.active) {
       this.trail.unshift([r.tipX, r.tipY]);
-      this.trail = this.trail.slice(0, 9);
+      this.trail = this.trail.slice(0, 6);
     } else if (this.trail.length > 0) {
       this.trail.pop();
     }
@@ -106,84 +133,87 @@ export class Canvas2DRenderer implements Renderer {
     if (this.trail.length < 2) {
       return;
     }
-    this.ctx.lineCap = 'round';
+    this.bctx.lineCap = 'butt';
     for (let i = 1; i < this.trail.length; i += 1) {
       const a = this.trail[i - 1] as [number, number];
       const b = this.trail[i] as [number, number];
-      this.ctx.globalAlpha = (1 - i / this.trail.length) * 0.4;
-      this.ctx.strokeStyle = PALETTE.warmRim;
-      this.ctx.lineWidth = (this.trail.length - i) * 2.4;
-      this.ctx.beginPath();
-      this.ctx.moveTo(a[0], a[1]);
-      this.ctx.lineTo(b[0], b[1]);
-      this.ctx.stroke();
+      this.bctx.globalAlpha = (1 - i / this.trail.length) * 0.5;
+      this.bctx.strokeStyle = i < 2 ? PALETTE.tellWhite : PALETTE.warmRim;
+      this.bctx.lineWidth = Math.max(1, (this.trail.length - i) * 0.7);
+      this.bctx.beginPath();
+      this.bctx.moveTo(Math.round(a[0]), Math.round(a[1]));
+      this.bctx.lineTo(Math.round(b[0]), Math.round(b[1]));
+      this.bctx.stroke();
     }
-    const lead0 = this.trail[0] as [number, number];
-    const lead1 = this.trail[1] as [number, number];
-    this.ctx.globalAlpha = 0.95;
-    this.ctx.strokeStyle = PALETTE.tellWhite;
-    this.ctx.lineWidth = 3;
-    this.ctx.beginPath();
-    this.ctx.moveTo(lead0[0], lead0[1]);
-    this.ctx.lineTo(lead1[0], lead1[1]);
-    this.ctx.stroke();
-    this.ctx.globalAlpha = 1;
+    this.bctx.globalAlpha = 1;
   }
 
   private drawProjectiles(view: View, duel: DuelState): void {
-    this.ctx.fillStyle = PALETTE.tellRed;
+    this.bctx.fillStyle = PALETTE.tellRed;
     for (const p of duel.projectiles) {
-      const px = sx(view, p.x);
-      this.ctx.fillRect(px - 7, view.groundY - view.h * 0.14, 14, 3);
+      const px = Math.round(sx(view, p.x));
+      this.bctx.fillRect(px - 3, Math.round(view.groundY - view.h * 0.14), 6, 2);
     }
   }
 
   render(rv: RenderView): void {
     const duel = rv.duel;
-    const shake = duel.shake;
-    const view = makeView(this.w, this.h, (Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake);
+    const shake = Math.min(duel.shake, 9) * 0.28;
+    const view = makeView(this.bw, this.bh, Math.round((Math.random() * 2 - 1) * shake), Math.round((Math.random() * 2 - 1) * shake));
     this.chicken = rv.cosmetics.chicken;
     this.sitting = rv.cosmetics.sitting;
     this.sleeping = rv.cosmetics.sleeping;
     this.ember += 1;
-    if (this.ember % 5 === 0) {
-      this.fx.ember(Math.random() * this.w, view.groundY - Math.random() * this.h * 0.32);
+    if (this.ember % 14 === 0) {
+      this.fx.ember(Math.random() * this.bw, view.groundY - Math.random() * this.bh * 0.3);
     }
     this.reactToEvents(view, duel, duel.events);
     this.fx.update(view.groundY);
-    drawBackground(this.ctx, view, rv.cosmetics, duel.tick);
-    this.fx.drawDecals(this.ctx);
+    this.bctx.clearRect(0, 0, this.bw, this.bh);
+    drawBackground(this.bctx, view, rv.cosmetics, duel.tick);
+    this.fx.drawDecals(this.bctx);
     this.drawFighter(view, duel, false);
     this.drawFighter(view, duel, true);
     this.drawTrail();
     this.drawProjectiles(view, duel);
-    this.fx.draw(this.ctx);
-    drawForeground(this.ctx, view, duel.tick);
-    this.drawFlash(view);
-    drawHud(this.ctx, view, duel);
-    this.drawBanner(view, rv.banner);
-    applyPost(this.ctx, view, rv.cosmetics.crt);
+    this.fx.draw(this.bctx);
+    drawWorldIndicators(this.bctx, view, duel);
+    drawForeground(this.bctx, view, duel.tick);
+    this.drawFlash();
+    this.blit();
+    this.dctx.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    const cssView = makeView(this.cssW, this.cssH, 0, 0);
+    drawHud(this.dctx, cssView, duel);
+    this.drawBanner(cssView, rv.banner);
+    applyPost(this.dctx, cssView, rv.cosmetics.crt);
   }
 
-  private drawFlash(view: View): void {
-    if (this.flash <= 0.01) {
+  private blit(): void {
+    this.dctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.dctx.imageSmoothingEnabled = false;
+    this.dctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.dctx.drawImage(this.buffer, 0, 0, this.bw, this.bh, 0, 0, this.bw * this.pix, this.bh * this.pix);
+  }
+
+  private drawFlash(): void {
+    if (this.flash <= 0.02) {
       this.flash = 0;
       return;
     }
-    this.ctx.globalAlpha = this.flash;
-    this.ctx.fillStyle = PALETTE.tellWhite;
-    this.ctx.fillRect(0, 0, view.w, view.h);
-    this.ctx.globalAlpha = 1;
-    this.flash *= 0.6;
+    this.bctx.globalAlpha = this.flash;
+    this.bctx.fillStyle = PALETTE.tellWhite;
+    this.bctx.fillRect(0, 0, this.bw, this.bh);
+    this.bctx.globalAlpha = 1;
+    this.flash *= 0.55;
   }
 
   private drawBanner(view: View, banner: string | null): void {
     if (banner === null) {
       return;
     }
-    this.ctx.font = `bold 24px ${FONT}`;
-    this.ctx.textAlign = 'center';
-    this.ctx.fillStyle = PALETTE.gold;
-    this.ctx.fillText(banner, view.w / 2, view.h * 0.36);
+    this.dctx.font = `bold 24px ${FONT}`;
+    this.dctx.textAlign = 'center';
+    this.dctx.fillStyle = PALETTE.gold;
+    this.dctx.fillText(banner, view.w / 2, view.h * 0.32);
   }
 }
