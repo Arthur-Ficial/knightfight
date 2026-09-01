@@ -1,7 +1,32 @@
 # Knightfight — final status
 
 **Live:** https://knightfight.franzai.com · **Repo:** https://github.com/Arthur-Ficial/knightfight
-**Build:** ~72 KB JS (25.7 KB gzip), loads in ~0.2s, works offline after first load (PWA).
+**Build:** ~82 KB JS (29 KB gzip), loads fast, works offline after first load (PWA).
+
+## Round 2 (+ addendum) — done and verified live
+- **Real pixel art:** the scene renders into a low-res offscreen buffer and integer-upscales
+  with smoothing off (one chunky pixel size for knights, background, FX). Quantised **banded**
+  torch/moon light (hard steps, no soft glows), calmer muted palette, fewer/slower particles,
+  CRT off by default.
+- **Natural arms:** two-bone elbow IK that grips the hilt, a real guard stance (weight on the
+  back foot), off-hand always employed, shoulders socketed under pauldrons, quantised sword angle.
+- **Directional combat:** tap a screen quadrant to strike that direction; the enemy holds a
+  shifting **guard direction** (strike the open side) and telegraphs its **attack direction** in
+  the same pixel-symbol language (dodge the matching way). Colour = what, direction = where. Fed
+  into combos + the Codex.
+- **Anti-misfire:** boons and valor commit only on a deliberate **swipe-left** (tap just focuses).
+- **Zero scroll, symbol-first:** title = animated ghost-hand gesture pictograms; Codex/Hall of
+  Valor = symbol grids with rank pips; boon cards = icon + one stat line + rarity by colour/frame.
+  Everything fits one screen at **390×844 and 375×667** (proven by automation).
+- **Wordless first-run tutorial:** a ghost hand shows tap-to-strike, then the **matching** dodge
+  direction for the incoming attack, and vanishes once you do it.
+- **Five review agents** (UX, retro-fun, first-timer, impatient, min-maxer) → fixes incl. the
+  tutorial dodge-direction bug, the never-consumed riposte-window exploit, dead slow-mo/haptics,
+  parry unlocked by default. See `docs/PLAYTEST.md`.
+- Gates green, selfplay still monotonic (novice < decent < expert, no wall), redeployed and
+  re-verified live at both viewports with the service worker cleared first; zero console errors.
+
+## Round 1 baseline below.
 
 ## Definition of Done — all met
 - ✅ Live on HTTPS at knightfight.franzai.com (Cloudflare Pages custom domain that
