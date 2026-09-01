@@ -10,7 +10,7 @@ const signature = (seed: number): readonly number[] => {
   const duel = createDuel(3, rng, resolveStats([]), new Set());
   for (let t = 0; t < 900; t += 1) {
     const intents: Intent[] =
-      t % 17 === 0 ? [{ kind: 'light', side: 'center' }] : t % 53 === 0 ? [{ kind: 'dodge', dir: 'left' }] : [];
+      t % 17 === 0 ? [{ kind: 'strike', dir: 'right' }] : t % 53 === 0 ? [{ kind: 'dodge', dir: 'left' }] : [];
     stepDuel(duel, intents);
   }
   return [

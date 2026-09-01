@@ -9,14 +9,14 @@ describe('gesture recognizer', () => {
   it('recognizes a tap', () => {
     const r = rec();
     r.down(s(1, 100, 700, 0));
-    expect(r.up(s(1, 103, 701, 50))).toEqual<Gesture[]>([{ kind: 'tap', x: 103 }]);
+    expect(r.up(s(1, 103, 701, 50))).toEqual<Gesture[]>([{ kind: 'tap', x: 103, y: 701 }]);
   });
 
   it('tolerates fat-finger jitter as a tap', () => {
     const r = rec();
     r.down(s(1, 100, 700, 0));
     r.move(s(1, 108, 706, 20));
-    expect(r.up(s(1, 114, 704, 60))).toEqual<Gesture[]>([{ kind: 'tap', x: 114 }]);
+    expect(r.up(s(1, 114, 704, 60))).toEqual<Gesture[]>([{ kind: 'tap', x: 114, y: 704 }]);
   });
 
   it('recognizes a hold as charge start/end', () => {
