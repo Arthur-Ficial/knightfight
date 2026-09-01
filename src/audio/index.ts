@@ -2,6 +2,7 @@ import { AudioEngine } from './context.ts';
 import { Music } from './music.ts';
 import {
   swordClang, parryRing, hitThud, whoosh, grunt, guardBreakCrack, killBoom, chargeHum, comboChime, uiClick,
+  telegraphCue, hiss,
 } from './sfx.ts';
 import type { SimEvent } from '../sim/state.ts';
 
@@ -50,6 +51,10 @@ export class GameAudio {
       case 'playerHit': return swordClang(this.engine);
       case 'enemyHitPlayer': hitThud(this.engine, false); return grunt(this.engine);
       case 'parry': return parryRing(this.engine);
+      case 'telegraph': return telegraphCue(this.engine, ev.tell ?? 'white');
+      case 'clang': return swordClang(this.engine);
+      case 'poison': return hiss(this.engine);
+      case 'feint': return uiClick(this.engine);
       case 'block': return swordClang(this.engine);
       case 'blockBreak': return guardBreakCrack(this.engine);
       case 'dodge': return whoosh(this.engine);

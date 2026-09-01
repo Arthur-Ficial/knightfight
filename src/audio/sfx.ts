@@ -95,3 +95,22 @@ export const comboChime = (e: AudioEngine, mult: number): void => {
   }
   tone(v, { freq: 700 * mult, dur: 0.18, type: 'triangle', gain: 0.2, sweepTo: 1200 * mult });
 };
+
+/** A short cue at the start of an enemy wind-up, pitched by tell so a gold
+ *  (parryable) reads different from a red (must-dodge) with eyes on the fighter. */
+export const telegraphCue = (e: AudioEngine, tell: 'white' | 'gold' | 'red'): void => {
+  const v = voice(e);
+  if (v === null) {
+    return;
+  }
+  const freq = tell === 'red' ? 180 : tell === 'gold' ? 660 : 420;
+  tone(v, { freq, dur: 0.1, type: tell === 'red' ? 'sawtooth' : 'square', gain: 0.09 });
+};
+
+export const hiss = (e: AudioEngine): void => {
+  const v = voice(e);
+  if (v === null) {
+    return;
+  }
+  noise(v, { dur: 0.14, gain: 0.1, type: 'highpass', freq: 4000 });
+};

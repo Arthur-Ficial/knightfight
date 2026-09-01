@@ -10,7 +10,7 @@ export interface PointerSample {
 }
 
 export type Gesture =
-  | { readonly kind: 'tap'; readonly x: number }
+  | { readonly kind: 'tap'; readonly x: number; readonly y: number }
   | { readonly kind: 'doubleTap' }
   | { readonly kind: 'holdStart' }
   | { readonly kind: 'holdEnd' }

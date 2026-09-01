@@ -1,45 +1,39 @@
-import { GESTURE } from '../config/index.ts';
 import type { GestureUnlock } from '../config/meta.ts';
-import type { Direction, Intent, Side } from '../core/types.ts';
+import type { Dir4, Direction, Intent } from '../core/types.ts';
 import type { Gesture } from './gesture.ts';
 
-// The last stage of input: a recognized Gesture becomes a sim Intent, gated by
-// which gestures the player has unlocked. Returns null for a no-op.
+// The last stage of input: a recognized Gesture becomes a sim Intent. Taps are
+// directional (the screen quadrant you tap = the strike direction); swipes are
+// directional dodges. This is the whole read of the fight.
 
-const sideForX = (x: number, width: number): Side => {
-  const zone = (width * GESTURE.centerZone) / 2;
-  if (x < width / 2 - zone) {
-    return 'left';
+/** Which quadrant of the screen a tap fell in, by dominant axis from centre. */
+export const tapZone = (x: number, y: number, w: number, h: number): Dir4 => {
+  const dx = x - w / 2;
+  const dy = y - h / 2;
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return dy < 0 ? 'up' : 'down';
   }
-  if (x > width / 2 + zone) {
-    return 'right';
-  }
-  return 'center';
+  return dx < 0 ? 'left' : 'right';
 };
 
-const swipeIntent = (dir: Direction): Intent => {
-  switch (dir) {
-    case 'up':
-      return { kind: 'overhead' };
-    case 'down':
-      return { kind: 'sweep' };
-    case 'left':
-      return { kind: 'dodge', dir: 'left' };
-    case 'right':
-      return { kind: 'dodge', dir: 'right' };
-    default:
-      return { kind: 'slash', dir };
+/** Collapse an 8-way swipe to the nearest cardinal for a directional dodge. */
+export const cardinal = (dir: Direction): Dir4 => {
+  if (dir === 'up' || dir === 'down' || dir === 'left' || dir === 'right') {
+    return dir;
   }
+  return dir === 'upLeft' || dir === 'upRight' ? 'up'
+    : dir === 'downLeft' || dir === 'downRight' ? 'down' : 'right';
 };
 
 export const gestureToIntent = (
   g: Gesture,
   width: number,
+  height: number,
   unlocked: ReadonlySet<GestureUnlock>,
 ): Intent | null => {
   switch (g.kind) {
     case 'tap':
-      return { kind: 'light', side: sideForX(g.x, width) };
+      return { kind: 'strike', dir: tapZone(g.x, g.y, width, height) };
     case 'doubleTap':
       return { kind: 'feint' };
     case 'holdStart':
@@ -47,7 +41,7 @@ export const gestureToIntent = (
     case 'holdEnd':
       return { kind: 'chargeRelease' };
     case 'swipe':
-      return swipeIntent(g.dir);
+      return { kind: 'dodge', dir: cardinal(g.dir) };
     case 'blockStart':
       return { kind: 'blockStart' };
     case 'blockEnd':

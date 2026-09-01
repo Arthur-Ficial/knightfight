@@ -140,7 +140,7 @@ export class GestureRecognizer {
     }
     this.lastTapT = s.t;
     this.lastTapX = s.x;
-    return [{ kind: 'tap', x: s.x }];
+    return [{ kind: 'tap', x: s.x, y: s.y }];
   }
 
   private spread(): number {
