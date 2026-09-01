@@ -1,8 +1,10 @@
 import type { BoonDef } from '../config/index.ts';
-import { el, button, richButton } from './dom.ts';
+import { el, button } from './dom.ts';
+import { modSummary, dominantIcon } from './icons.ts';
+import { attachSwipeCommit } from './swipe.ts';
 
-// The three core-flow overlays. During a fight there is NO DOM UI at all - these
-// only appear between duels.
+// Between-fight overlays. Symbol-first, one screen, no scrolling. During a fight
+// there is NO DOM UI at all.
 
 export interface TitleData {
   readonly title: string;
@@ -19,44 +21,62 @@ export interface TitleActions {
   readonly onToggleCrt: () => void;
 }
 
+const ghostTile = (kind: string, glyph: string): HTMLElement => {
+  const tile = el('div', `kf-ghost kf-g-${kind}`);
+  tile.appendChild(el('div', 'kf-ghost-glyph', glyph));
+  tile.appendChild(el('div', 'kf-ghost-dot'));
+  return tile;
+};
+
+const iconButton = (glyph: string, onTap: () => void): HTMLButtonElement => {
+  const b = button('kf-btn kf-icon-btn', onTap);
+  b.textContent = glyph;
+  return b;
+};
+
 export const buildTitle = (data: TitleData, actions: TitleActions): HTMLElement => {
   const root = el('div', 'kf-panel');
   const logo = el('div', 'kf-title', 'KNIGHTFIGHT');
   logo.id = 'kf-logo';
   root.appendChild(logo);
-  root.appendChild(el('div', 'kf-sub', `${data.title}  ·  best rung ${data.bestRung}`));
-  root.appendChild(el('div', 'kf-p', 'Tap to strike · hold to charge · swipe to dodge, cut & sweep · two fingers to parry · the whole screen is your blade.'));
+  root.appendChild(el('div', 'kf-sub', `${data.title} · best ${data.bestRung}`));
+  const strip = el('div', 'kf-ghost-strip');
+  strip.appendChild(ghostTile('tap', '✛'));
+  strip.appendChild(ghostTile('swipe', '⇦'));
+  strip.appendChild(ghostTile('hold', '◆'));
+  strip.appendChild(ghostTile('two', '◇'));
+  root.appendChild(strip);
   const play = button('kf-btn kf-primary', actions.onPlay);
   play.textContent = 'ENTER THE ARENA';
   root.appendChild(play);
   const row = el('div', 'kf-row');
-  row.appendChild(labelled('Combo Codex', actions.onCodex));
-  row.appendChild(labelled('Upgrades', actions.onMeta));
+  row.appendChild(iconButton('☰ Codex', actions.onCodex));
+  row.appendChild(iconButton('★ Valor', actions.onMeta));
+  row.appendChild(iconButton(data.muted ? '♪̸' : '♪', actions.onToggleMute));
+  row.appendChild(iconButton(data.crt ? '▤' : '▢', actions.onToggleCrt));
   root.appendChild(row);
-  const toggles = el('div', 'kf-row');
-  toggles.appendChild(labelled(data.muted ? 'Sound: off' : 'Sound: on', actions.onToggleMute));
-  toggles.appendChild(labelled(data.crt ? 'CRT: on' : 'CRT: off', actions.onToggleCrt));
-  root.appendChild(toggles);
   return root;
 };
 
-const labelled = (text: string, onTap: () => void): HTMLButtonElement => {
-  const b = button('kf-btn', onTap);
-  b.textContent = text;
-  return b;
-};
+const RARITY_CLASS: Record<string, string> = { common: '', rare: 'kf-rare', epic: 'kf-epic' };
 
 export const buildBoonPick = (boons: readonly BoonDef[], onPick: (b: BoonDef) => void): HTMLElement => {
   const root = el('div', 'kf-panel');
-  root.appendChild(el('div', 'kf-h', 'CHOOSE A BOON'));
+  root.appendChild(el('div', 'kf-h', 'CHOOSE'));
+  root.appendChild(el('div', 'kf-sub', '◄ swipe a card to take'));
   for (const boon of boons) {
-    const b = richButton(`${boon.name}  [${boon.rarity}]`, boon.description, () => {
-      onPick(boon);
-    });
-    if (boon.kind === 'curse') {
-      b.style.borderColor = '#8a2a2a';
-    }
-    root.appendChild(b);
+    const cls = boon.kind === 'curse' ? 'kf-curse' : RARITY_CLASS[boon.rarity] ?? '';
+    const card = el('div', `kf-card ${cls}`);
+    card.appendChild(el('div', 'kf-card-icon', dominantIcon(boon.mods)));
+    const body = el('div', 'kf-card-body');
+    body.appendChild(el('div', 'kf-card-name', boon.name));
+    body.appendChild(el('div', 'kf-card-stat', modSummary(boon.mods)));
+    const detail = el('div', 'kf-card-detail kf-hidden', boon.description);
+    body.appendChild(detail);
+    card.appendChild(body);
+    card.appendChild(el('div', 'kf-card-swipe', '◄'));
+    attachSwipeCommit(card, () => detail.classList.toggle('kf-hidden'), () => onPick(boon));
+    root.appendChild(card);
   }
   return root;
 };
@@ -76,17 +96,17 @@ export interface DeathActions {
 
 export const buildDeath = (data: DeathData, actions: DeathActions): HTMLElement => {
   const root = el('div', 'kf-panel');
-  root.appendChild(el('div', 'kf-h', 'YOU DIED'));
-  root.appendChild(el('div', 'kf-sub', `Reached rung ${data.rung}${data.newBest ? '  ·  NEW BEST' : ''}`));
-  root.appendChild(el('div', 'kf-sub', `+${data.valor} valor  ·  ${data.title}`));
+  root.appendChild(el('div', 'kf-h', '☠ DEFEATED'));
+  root.appendChild(el('div', 'kf-sub', `rung ${data.rung}${data.newBest ? ' · NEW BEST' : ''}`));
+  root.appendChild(el('div', 'kf-sub', `+${data.valor} ★ · ${data.title}`));
   if (data.canRevive) {
-    root.appendChild(el('div', 'kf-p', 'Draw a heart to spend a banked revive.'));
+    root.appendChild(el('div', 'kf-sub', 'draw ◯ to bank a revive'));
   }
   const up = button('kf-btn kf-primary', actions.onUpgrades);
-  up.textContent = 'SPEND VALOR';
+  up.textContent = '★ SPEND VALOR';
   root.appendChild(up);
   const back = button('kf-btn', actions.onTitle);
-  back.textContent = 'Back to title';
+  back.textContent = 'TITLE';
   root.appendChild(back);
   return root;
 };

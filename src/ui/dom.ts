@@ -28,12 +28,3 @@ export const button = (className: string, onTap: () => void): HTMLButtonElement 
   });
   return b;
 };
-
-export const richButton = (title: string, detail: string, onTap: () => void): HTMLButtonElement => {
-  const b = button('kf-btn', onTap);
-  const strong = el('strong', undefined, title);
-  const span = el('span', undefined, detail);
-  b.appendChild(strong);
-  b.appendChild(span);
-  return b;
-};

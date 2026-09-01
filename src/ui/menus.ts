@@ -1,70 +1,86 @@
 import { COMBOS, UPGRADES } from '../config/index.ts';
+import type { UpgradeDef } from '../config/meta.ts';
 import { rankOf, upgradeCost, type MetaState } from '../sim/meta.ts';
-import { el, button, richButton } from './dom.ts';
+import { el, button } from './dom.ts';
+import { comboRow, dominantIcon } from './icons.ts';
+import { attachSwipeCommit } from './swipe.ts';
 
-// Secondary overlays: the Combo Codex, the meta upgrade tree, and the dev
-// overlay (long-press the logo) that dumps live sim stats.
+// Combo Codex and Hall of Valor. Symbol-first, two-column grids that fit one
+// screen at 390x844 AND 375x667 - no scrolling. Buying valor needs a swipe.
+
+const pips = (rank: number, max: number): string => '●'.repeat(rank) + '○'.repeat(max - rank);
+
+const upgradeGlyph = (u: UpgradeDef): string =>
+  u.effect.kind === 'unlock'
+    ? (u.effect.gesture === 'whirlwind' ? '◯' : u.effect.gesture === 'focus' ? '⧖' : '◇')
+    : dominantIcon(u.effect.mods);
 
 export const buildCodex = (found: readonly string[], onBack: () => void): HTMLElement => {
   const root = el('div', 'kf-panel');
-  root.appendChild(el('div', 'kf-h', 'COMBO CODEX'));
+  root.appendChild(el('div', 'kf-h', '☰ CODEX'));
   const known = new Set(found);
-  const list = el('div', 'kf-list');
+  const grid = el('div', 'kf-grid');
   for (const c of COMBOS) {
-    const item = el('div', 'kf-item');
+    const cell = el('div', 'kf-cell');
     if (known.has(c.name)) {
-      item.appendChild(el('div', 'kf-tag', c.name));
-      item.appendChild(el('div', 'kf-p', c.sequence.join('  →  ')));
-      item.appendChild(el('div', 'kf-p', c.description));
+      cell.appendChild(el('div', 'kf-cell-name', c.name));
+      cell.appendChild(el('div', 'kf-cell-row', comboRow(c.sequence)));
     } else {
-      item.className = 'kf-item kf-locked';
-      item.appendChild(el('div', 'kf-tag', '??? — undiscovered'));
-      item.appendChild(el('div', 'kf-p', `${c.sequence.length} inputs`));
+      cell.classList.add('kf-locked');
+      cell.appendChild(el('div', 'kf-cell-name', '? ? ?'));
+      cell.appendChild(el('div', 'kf-cell-row', '·'.repeat(c.sequence.length)));
     }
-    list.appendChild(item);
+    grid.appendChild(cell);
   }
-  root.appendChild(list);
+  root.appendChild(grid);
   const back = button('kf-btn', onBack);
-  back.textContent = 'Back';
+  back.textContent = '‹ BACK';
   root.appendChild(back);
   return root;
 };
 
 export const buildMeta = (meta: MetaState, onBuy: (id: string) => void, onBack: () => void): HTMLElement => {
   const root = el('div', 'kf-panel');
-  root.appendChild(el('div', 'kf-h', 'HALL OF VALOR'));
-  root.appendChild(el('div', 'kf-sub', `${meta.valor} valor`));
+  root.appendChild(el('div', 'kf-h', `★ ${meta.valor}`));
+  root.appendChild(el('div', 'kf-sub', '◄ swipe to buy'));
+  const grid = el('div', 'kf-grid');
   for (const u of UPGRADES) {
     const rank = rankOf(meta, u.id);
     const maxed = rank >= u.maxRank;
     const cost = upgradeCost(u.id, rank);
-    const label = maxed
-      ? `${u.name}  (MAX)`
-      : `${u.name}  (${rank}/${u.maxRank})  —  ${cost} valor`;
-    const b = richButton(label, u.description, () => {
-      onBuy(u.id);
-    });
+    const cell = el('div', 'kf-cell kf-buy');
+    cell.appendChild(el('div', 'kf-cell-icon', upgradeGlyph(u)));
+    cell.appendChild(el('div', 'kf-cell-name', u.name));
+    cell.appendChild(el('div', 'kf-cell-row', maxed ? pips(rank, u.maxRank) : `${pips(rank, u.maxRank)}  ${cost}★`));
+    const detail = el('div', 'kf-card-detail kf-hidden', u.description);
+    cell.appendChild(detail);
     if (maxed || meta.valor < cost) {
-      b.classList.add('kf-locked');
+      cell.classList.add('kf-locked');
     }
-    root.appendChild(b);
+    attachSwipeCommit(cell, () => detail.classList.toggle('kf-hidden'), () => {
+      if (!maxed && meta.valor >= cost) {
+        onBuy(u.id);
+      }
+    });
+    grid.appendChild(cell);
   }
+  root.appendChild(grid);
   const back = button('kf-btn', onBack);
-  back.textContent = 'Back';
+  back.textContent = '‹ BACK';
   root.appendChild(back);
   return root;
 };
 
 export const buildDev = (lines: readonly string[], onClose: () => void): HTMLElement => {
   const root = el('div', 'kf-panel');
-  root.appendChild(el('div', 'kf-h', 'DEV OVERLAY'));
+  root.appendChild(el('div', 'kf-h', 'DEV'));
   const list = el('div', 'kf-list');
   for (const line of lines) {
     list.appendChild(el('div', 'kf-item', line));
   }
   root.appendChild(list);
   const close = button('kf-btn', onClose);
-  close.textContent = 'Close';
+  close.textContent = 'CLOSE';
   root.appendChild(close);
   return root;
 };
