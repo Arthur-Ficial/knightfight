@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dev-dist/
+ios/
+.DS_Store
+*.log
+.vite/
+stats.html

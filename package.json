@@ -1,0 +1,35 @@
+{
+  "name": "knightfight",
+  "version": "1.0.0",
+  "description": "Knightfight - a retro, gesture-only, endless knight-duelling game",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "selfplay": "tsx scripts/selfplay.ts",
+    "ios:add": "cap add ios",
+    "ios:sync": "cap sync ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.2",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.0.5",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}
