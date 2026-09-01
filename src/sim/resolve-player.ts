@@ -9,6 +9,7 @@ import {
   GUARDED_DAMAGE,
   EXECUTION_MULT,
   OPEN_HIT_BONUS,
+  LIFESTEAL_CAP,
 } from '../config/index.ts';
 import { chance } from '../core/rng.ts';
 import { clamp } from '../core/math.ts';
@@ -65,10 +66,11 @@ const finishHit = (duel: DuelState, res: DamageResult, a: ActiveAction, dmg: num
   const { player: p, enemy: e } = duel;
   e.hp -= dmg;
   p.rage = Math.min(p.stats.maxRage, p.rage + rageOf(a) * p.stats.rageGainMult);
-  p.hp = Math.min(p.stats.maxHp, p.hp + dmg * p.stats.lifesteal);
+  p.hp = Math.min(p.stats.maxHp, p.hp + Math.min(dmg * p.stats.lifesteal, LIFESTEAL_CAP));
   duel.hitstop = Math.max(duel.hitstop, res.hitstop);
   duel.shake = Math.max(duel.shake, dmg * 0.5 + (res.crit ? 4 : 0));
   if (a.riposte) {
+    p.riposteWindow = 0;
     duel.slowmo = Math.max(duel.slowmo, SLOWMO.parryTicks);
     duel.events.push({ kind: 'riposte', amount: dmg, x: e.x });
   } else {
@@ -103,7 +105,8 @@ const applyToEnemy = (duel: DuelState, res: DamageResult, blocked: boolean): voi
       staggerEnemy(duel, PARRY_STAGGER_TICKS);
     }
   }
-  finishHit(duel, res, a, res.damage * (executing ? EXECUTION_MULT : 1) * OPEN_HIT_BONUS);
+  const openBonus = a.name === 'strike' && !executing ? OPEN_HIT_BONUS : 1;
+  finishHit(duel, res, a, res.damage * (executing ? EXECUTION_MULT : 1) * openBonus);
 };
 
 export const resolvePlayerAttack = (duel: DuelState): void => {

@@ -69,15 +69,17 @@ export const CRIT = {
   multiplier: 1.9,
 } as const;
 
-/** While an enemy's guard holds, hits are largely absorbed - break it first. */
-export const GUARDED_DAMAGE = 0.4;
+/** Striking the GUARDED direction is heavily absorbed - read the open side. */
+export const GUARDED_DAMAGE = 0.25;
 /** Execution damage bonus while an enemy is staggered / guard-broken. */
-export const EXECUTION_MULT = 1.4;
+export const EXECUTION_MULT = 1.35;
 /** Enemy guard recovers slowly while idle. */
 export const GUARD_REGEN = 0.25;
 
-/** Riposte massively amplifies the strike that follows a parry. */
-export const RIPOSTE_DAMAGE_MULT = 3.2;
+/** Riposte amplifies the ONE strike that follows a parry (window is consumed). */
+export const RIPOSTE_DAMAGE_MULT = 2.2;
+/** Healing from lifesteal is capped per hit so it cannot trivialise damage. */
+export const LIFESTEAL_CAP = 6;
 /** Perfect-parry rewards. */
 export const PARRY_RAGE_GAIN = 22;
 export const PARRY_STAGGER_TICKS = 42;

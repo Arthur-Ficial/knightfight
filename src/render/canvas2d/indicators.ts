@@ -43,12 +43,15 @@ const drawGuard = (ctx: CanvasRenderingContext2D, view: View, duel: DuelState): 
     return;
   }
   const cx = sx(view, e.x);
-  const cy = view.groundY - view.h * 0.09;
-  const [gx, gy] = offsetFor(e.guardDir, cx, cy, view.w * 0.07);
-  drawChevron(ctx, gx, gy, e.guardDir, view.w * 0.05, '#0a0a12');
-  ctx.globalAlpha = 0.9;
+  const cy = view.groundY - view.h * 0.1;
+  const [gx, gy] = offsetFor(e.guardDir, cx, cy, view.w * 0.08);
+  // A small shield mark: dark backing + a bright bracket, distinct from the bold
+  // filled attack chevron so guard (where NOT to hit) reads apart from attack.
+  ctx.fillStyle = '#0a0a12';
+  ctx.beginPath();
+  ctx.arc(Math.round(gx), Math.round(gy), Math.round(view.w * 0.05), 0, Math.PI * 2);
+  ctx.fill();
   drawChevron(ctx, gx, gy, e.guardDir, view.w * 0.04, PALETTE.heroRim);
-  ctx.globalAlpha = 1;
 };
 
 const drawTelegraph = (ctx: CanvasRenderingContext2D, view: View, duel: DuelState): void => {

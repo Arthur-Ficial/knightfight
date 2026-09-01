@@ -95,6 +95,8 @@ export class Canvas2DRenderer implements Renderer {
         this.flash = Math.max(this.flash, 0.3);
       } else if (ev.kind === 'dodge') {
         this.fx.dust(sx(view, ev.x ?? duel.player.x), view.groundY);
+      } else if (ev.kind === 'busy') {
+        this.fx.dust(sx(view, ev.x ?? duel.player.x), view.groundY - view.h * 0.1);
       } else if (ev.kind === 'kill') {
         this.fx.blood(x, y, 18);
         this.flash = Math.max(this.flash, 0.5);

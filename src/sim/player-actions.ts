@@ -83,7 +83,14 @@ const beginSpecial = (duel: DuelState, name: PlayerActionName, token: ComboToken
 
 const startStrike = (duel: DuelState, dir: Dir4): void => {
   const p = duel.player;
-  if (!canAct(p) || !spend(p, STRIKE[dir].stamina)) {
+  if (!canAct(p)) {
+    // Mid-swing: the tap is dropped. Emit a cue so it doesn't feel unresponsive.
+    if (p.action !== null && p.action.phase !== 'active') {
+      duel.events.push({ kind: 'busy', dir, x: p.x });
+    }
+    return;
+  }
+  if (!spend(p, STRIKE[dir].stamina)) {
     return;
   }
   beginStrike(duel, dir);

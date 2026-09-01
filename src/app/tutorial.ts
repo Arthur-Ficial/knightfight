@@ -1,26 +1,32 @@
+import type { Dir4 } from '../core/types.ts';
+
 // Wordless first-run tutorial: a ghost hand shows the gesture the player needs
-// right now (tap to strike, then swipe to dodge) and vanishes once they do it.
-// Pointer-events: none, so it never intercepts a real gesture.
+// right now (tap to strike, then dodge the MATCHING direction of the incoming
+// attack) and vanishes once they do it. Pointer-events: none.
 
 type Stage = 'tap' | 'dodge' | 'done';
+
+const DIR_GLYPH: Record<Dir4, string> = { up: '⇧', down: '⇩', left: '⇦', right: '⇨' };
 
 export class Tutorial {
   private el: HTMLElement | null = null;
   private stage: Stage = 'done';
+  private expected: Dir4 | null = null;
 
   start(): void {
     this.stage = 'tap';
+    this.expected = null;
     this.show('✛');
   }
 
   /** Returns true when the tutorial has just been fully completed. */
-  onIntent(kind: string): boolean {
+  onIntent(kind: string, dir: Dir4 | null): boolean {
     if (this.stage === 'tap' && kind === 'strike') {
       this.stage = 'dodge';
       this.hide();
       return false;
     }
-    if (this.stage === 'dodge' && kind === 'dodge') {
+    if (this.stage === 'dodge' && kind === 'dodge' && dir === this.expected) {
       this.stage = 'done';
       this.hide();
       return true;
@@ -28,10 +34,13 @@ export class Tutorial {
     return false;
   }
 
-  onTelegraph(): void {
-    if (this.stage === 'dodge' && this.el === null) {
-      this.show('⇦');
+  /** Show the dodge hint pointing the SAME way the incoming attack does. */
+  onTelegraph(dir: Dir4): void {
+    if (this.stage !== 'dodge') {
+      return;
     }
+    this.expected = dir;
+    this.show(DIR_GLYPH[dir]);
   }
 
   get active(): boolean {

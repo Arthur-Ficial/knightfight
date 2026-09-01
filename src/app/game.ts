@@ -105,8 +105,8 @@ export class Game {
     stepDuel(this.duel, input);
     this.audio.handle(this.duel.events);
     feelEvents(this.duel.events);
-    if (this.tutorial.active && this.duel.enemy.phase === 'telegraph') {
-      this.tutorial.onTelegraph();
+    if (this.tutorial.active && this.duel.enemy.phase === 'telegraph' && this.duel.enemy.move !== null) {
+      this.tutorial.onTelegraph(this.duel.enemy.move.dir);
     }
     this.absorbEvents();
   }
@@ -238,7 +238,7 @@ export class Game {
       const intent = gestureToIntent(g, globalThis.innerWidth, globalThis.innerHeight, this.duel.player.unlocked);
       if (intent !== null) {
         this.intents.push(intent);
-        this.tutorial.onIntent(intent.kind);
+        this.tutorial.onIntent(intent.kind, intent.kind === 'strike' || intent.kind === 'dodge' ? intent.dir : null);
       }
       return;
     }

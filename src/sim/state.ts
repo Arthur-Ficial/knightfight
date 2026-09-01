@@ -140,6 +140,7 @@ export type SimEventKind =
   | 'death'
   | 'projectile'
   | 'whiff'
+  | 'busy'
   | 'focus'
   | 'poison'
   | 'special';
