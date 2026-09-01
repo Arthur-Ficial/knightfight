@@ -57,6 +57,8 @@ export const buildEnemy = (rung: number, rng: Rng): EnemyState => {
   const hp = Math.round(def.maxHp * (1 + l.hpPerRung * delta) * af.hpMult);
   const guardMax = Math.round(def.guardMax * (1 + l.guardPerRung * delta) * af.guardMult);
   const prefix = affixes.map((a) => a.name).join(' ');
+  // Early rungs telegraph slower so a new player can learn the dodge timing.
+  const rookieEase = rung <= 2 ? 1.45 : rung <= 4 ? 1.18 : 1;
   return {
     archetype: def.id,
     name: prefix ? `${prefix} ${def.name}` : def.name,
@@ -78,7 +80,7 @@ export const buildEnemy = (rung: number, rng: Rng): EnemyState => {
     tempo: Math.min(l.tempoCap, def.tempo * (1 + l.tempoPerRung * delta)) * af.tempoMult,
     approachBias: def.approachBias,
     damageMult: (1 + l.damagePerRung * delta) * af.damageMult,
-    telegraphMult: Math.max(l.telegraphFloor, 1 - l.telegraphShrinkPerRung * delta) * af.telegraphMult,
+    telegraphMult: Math.max(l.telegraphFloor, 1 - l.telegraphShrinkPerRung * delta) * af.telegraphMult * rookieEase,
     special: def.special,
     phaseTwo: false,
     willFeint: false,

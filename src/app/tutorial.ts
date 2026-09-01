@@ -12,6 +12,7 @@ export class Tutorial {
   private el: HTMLElement | null = null;
   private stage: Stage = 'done';
   private expected: Dir4 | null = null;
+  private paced = false;
 
   start(): void {
     this.stage = 'tap';
@@ -45,6 +46,18 @@ export class Tutorial {
 
   get active(): boolean {
     return this.stage !== 'done';
+  }
+
+  /** Pace the enemy for teaching: frozen offense during the tap lesson, gentle
+   *  telegraphs during the dodge lesson, restored to `baseAgg` once done. */
+  pace(enemy: { aggression: number }, baseAgg: number): void {
+    if (this.active) {
+      enemy.aggression = this.stage === 'tap' ? 0 : Math.min(baseAgg, 0.4);
+      this.paced = true;
+    } else if (this.paced) {
+      enemy.aggression = baseAgg;
+      this.paced = false;
+    }
   }
 
   stop(): void {

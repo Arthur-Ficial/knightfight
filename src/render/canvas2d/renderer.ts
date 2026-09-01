@@ -3,8 +3,9 @@ import { dpr } from '../../platform/viewport.ts';
 import type { DuelState, SimEvent } from '../../sim/state.ts';
 import type { Renderer, RenderView } from '../renderer.ts';
 import { makeView, sx, type View } from './view.ts';
+import type { Dir4 } from '../../core/types.ts';
 import { drawBackground, drawForeground } from './background.ts';
-import { drawWorldIndicators } from './indicators.ts';
+import { drawWorldIndicators, drawChevron } from './indicators.ts';
 import { drawHud } from './hud.ts';
 import { applyPost } from './post.ts';
 import { FxSystem } from './fx.ts';
@@ -39,6 +40,11 @@ export class Canvas2DRenderer implements Renderer {
   private trail: [number, number][] = [];
   private ember = 0;
   private flash = 0;
+  private floatText = '';
+  private floatColor: string = PALETTE.ink;
+  private floatTicks = 0;
+  private hurtDir: Dir4 | null = null;
+  private hurtTicks = 0;
   private chicken = false;
   private sitting = false;
   private sleeping = false;
@@ -90,9 +96,17 @@ export class Canvas2DRenderer implements Renderer {
         this.flash = Math.max(this.flash, 0.22);
       } else if (ev.kind === 'enemyHitPlayer') {
         this.fx.blood(sx(view, duel.player.x), y);
+        if (ev.dir !== undefined) {
+          this.hurtDir = ev.dir;
+          this.hurtTicks = 26;
+        }
       } else if (ev.kind === 'guardBreak' || ev.kind === 'blockBreak') {
         this.fx.sparks(x, y, 12);
         this.flash = Math.max(this.flash, 0.3);
+        this.setFloat('BREAK!', PALETTE.tellGold);
+      } else if (ev.kind === 'clang') {
+        this.fx.sparks(x, y, 3);
+        this.setFloat('BLOCKED', PALETTE.heroSteel);
       } else if (ev.kind === 'dodge') {
         this.fx.dust(sx(view, ev.x ?? duel.player.x), view.groundY);
       } else if (ev.kind === 'busy') {
@@ -180,14 +194,47 @@ export class Canvas2DRenderer implements Renderer {
     this.drawProjectiles(view, duel);
     this.fx.draw(this.bctx);
     drawWorldIndicators(this.bctx, view, duel);
+    this.drawHurtHint(view, duel);
     drawForeground(this.bctx, view, duel.tick);
     this.drawFlash();
     this.blit();
     this.dctx.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
     const cssView = makeView(this.cssW, this.cssH, 0, 0);
     drawHud(this.dctx, cssView, duel);
+    this.drawFloat(cssView);
     this.drawBanner(cssView, rv.banner);
     applyPost(this.dctx, cssView, rv.cosmetics.crt);
+  }
+
+  private drawHurtHint(view: View, duel: DuelState): void {
+    if (this.hurtTicks <= 0 || this.hurtDir === null) {
+      return;
+    }
+    this.hurtTicks -= 1;
+    const px = sx(view, duel.player.x);
+    const py = view.groundY - view.h * 0.17;
+    this.bctx.globalAlpha = Math.min(0.85, this.hurtTicks / 14);
+    drawChevron(this.bctx, px, py, this.hurtDir, view.w * 0.032, PALETTE.tellRed);
+    this.bctx.globalAlpha = 1;
+  }
+
+  private setFloat(text: string, color: string): void {
+    this.floatText = text;
+    this.floatColor = color;
+    this.floatTicks = 34;
+  }
+
+  private drawFloat(view: View): void {
+    if (this.floatTicks <= 0) {
+      return;
+    }
+    this.floatTicks -= 1;
+    this.dctx.font = `bold 20px ${FONT}`;
+    this.dctx.textAlign = 'center';
+    this.dctx.globalAlpha = Math.min(1, this.floatTicks / 12);
+    this.dctx.fillStyle = this.floatColor;
+    this.dctx.fillText(this.floatText, view.w * 0.5, view.h * 0.44);
+    this.dctx.globalAlpha = 1;
   }
 
   private blit(): void {

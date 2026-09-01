@@ -5,9 +5,9 @@ The bot plays the real sim through the real intent surface - no shortcuts.
 
 | Skill | Avg rung | Min | Max | Timeouts | Combat deaths | Stamina-starved | Avg DPS |
 |---|---|---|---|---|---|---|---|
-| novice | 26.6 | 18 | 33 | 0 | 16 | 0% | 69.8 |
-| decent | 34.8 | 28 | 44 | 0 | 16 | 0% | 95.9 |
-| expert | 40.3 | 34 | 45 | 0 | 12 | 0% | 120.1 |
+| novice | 25.2 | 16 | 33 | 0 | 16 | 0% | 70.6 |
+| decent | 33.9 | 29 | 41 | 0 | 16 | 0% | 94.7 |
+| expert | 39.4 | 24 | 45 | 0 | 12 | 0% | 119.5 |
 
 ## Reading it
 - **Avg rung** should rise clearly with skill: novice clears the tutorial band, expert reaches the boss and beyond.

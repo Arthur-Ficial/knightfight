@@ -61,7 +61,7 @@ const onBlock = (duel: DuelState, damage: number): void => {
   }
 };
 
-const applyHit = (duel: DuelState, damage: number): void => {
+const applyHit = (duel: DuelState, damage: number, dir: Dir4): void => {
   const p = duel.player;
   const e = duel.enemy;
   let dmg = damage * e.damageMult;
@@ -74,7 +74,7 @@ const applyHit = (duel: DuelState, damage: number): void => {
   duel.perfectParryStreak = 0;
   duel.shake = Math.max(duel.shake, dmg * 0.5);
   duel.hitstop = Math.max(duel.hitstop, HITSTOP.light);
-  duel.events.push({ kind: 'enemyHitPlayer', amount: dmg, x: p.x });
+  duel.events.push({ kind: 'enemyHitPlayer', amount: dmg, dir, x: p.x });
   if (e.special === 'poison') {
     e.poisonOnPlayer = Math.min(POISON.ticks * POISON.maxStacks, e.poisonOnPlayer + POISON.ticks);
   }
@@ -103,5 +103,5 @@ export const resolveEnemyHit = (duel: DuelState, damage: number, tell: TellColou
     onBlock(duel, damage);
     return;
   }
-  applyHit(duel, damage);
+  applyHit(duel, damage, dir);
 };

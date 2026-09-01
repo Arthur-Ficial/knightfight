@@ -15,10 +15,10 @@ export interface View {
 export const makeView = (w: number, h: number, shakeX: number, shakeY: number): View => ({
   w,
   h,
-  // Ground sits low so the fighters fill the centre of a portrait phone rather
-  // than floating high over a dead foreground; knights a touch larger to match.
-  groundY: Math.round(h * 0.78),
-  knightScale: h / 660,
+  // Bigger fighters, feet low enough that the PAIR is centred (~mid-screen) with
+  // balanced headroom/foreground - not floating high, not sunk to the bottom.
+  groundY: Math.round(h * 0.67),
+  knightScale: h / 470,
   shakeX,
   shakeY,
 });

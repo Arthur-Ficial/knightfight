@@ -41,6 +41,7 @@ export class Game {
   private bannerTicks = 0;
   private idleTitle = 0;
   private slowPhase = 0;
+  private enemyAgg = 0;
   private unlocked = false;
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement) {
@@ -62,9 +63,7 @@ export class Game {
   }
 
   private firstTouch(): void {
-    this.unlocked = true;
-    this.audio.unlock();
-    this.audio.startMusic();
+    this.unlocked = true; this.audio.unlock(); this.audio.startMusic();
   }
 
   private resize(): void {
@@ -79,13 +78,9 @@ export class Game {
 
   private tick(): void {
     this.pump.poll();
-    if (this.bannerTicks > 0) {
-      this.bannerTicks -= 1;
-    }
+    if (this.bannerTicks > 0) { this.bannerTicks -= 1; }
     this.idleTitle = this.mode === 'title' ? this.idleTitle + 1 : 0;
-    if (this.mode === 'title' || this.mode === 'duel') {
-      this.stepWorld();
-    }
+    if (this.mode === 'title' || this.mode === 'duel') { this.stepWorld(); }
     this.advancePending();
   }
 
@@ -99,6 +94,9 @@ export class Game {
         return;
       }
       this.slowPhase -= 1;
+    }
+    if (this.mode === 'duel') {
+      this.tutorial.pace(this.duel.enemy, this.enemyAgg);
     }
     const input = this.mode === 'duel' ? this.intents : [];
     this.intents = [];
@@ -163,6 +161,7 @@ export class Game {
       this.flash('A HOODED DUELIST APPEARS');
     }
     this.duel = createDuel(run.rung, run.rng, runStats(run, this.meta), runUnlocks(this.meta));
+    this.enemyAgg = this.duel.enemy.aggression;
     this.audio.setRung(run.rung);
     this.mode = 'duel';
     this.overlays.hide();
