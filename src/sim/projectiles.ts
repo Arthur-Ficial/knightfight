@@ -16,7 +16,7 @@ export const updateProjectiles = (duel: DuelState): void => {
     proj.x += proj.vx;
     if (Math.abs(proj.x - p.x) <= HIT_RADIUS) {
       proj.alive = false;
-      resolveEnemyHit(duel, proj.damage, 'red');
+      resolveEnemyHit(duel, proj.damage, 'red', proj.dir);
     } else if (proj.x < -20 || proj.x > ARENA.width + 20) {
       proj.alive = false;
     }

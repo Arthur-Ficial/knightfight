@@ -39,7 +39,6 @@ const unlockNode = (
 ): UpgradeDef => ({ id: asUpgradeId(id), name, cost, maxRank: 1, effect: { kind: 'unlock', gesture }, prereq: null, description });
 
 export const UPGRADES: readonly UpgradeDef[] = [
-  unlockNode('unlock-parry', 'Way of the Parry', 60, 'parry', 'Unlock the two-finger parry and its riposte.'),
   unlockNode('unlock-whirlwind', 'Whirlwind Art', 130, 'whirlwind', 'Unlock the circle-gesture whirlwind special.'),
   unlockNode('unlock-focus', 'Focus', 190, 'focus', 'Unlock the pinch focus - brief slow-motion.'),
   modNode('vitality', 'Vitality', 45, 4, { maxHp: 15 }, '+15 max HP per rank.'),

@@ -23,6 +23,7 @@ export const createPlayer = (
   chargeTicks: 0,
   charging: false,
   blocking: false,
+  dodgeDir: null,
   riposteWindow: 0,
   stunTicks: 0,
   focusTicks: 0,

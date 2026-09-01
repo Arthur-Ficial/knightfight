@@ -1,4 +1,4 @@
-import type { ArchetypeId, Side, TellColour } from '../core/types.ts';
+import type { ArchetypeId, Dir4, TellColour } from '../core/types.ts';
 import type { Rng } from '../core/rng.ts';
 import type { PlayerActionName } from '../config/timings.ts';
 import type { ComboToken, ComboEffect } from '../config/combos.ts';
@@ -36,7 +36,7 @@ export interface EffectiveStats {
   readonly chipReduction: number;
 }
 
-export type ActionName = PlayerActionName | 'dodge' | 'parry';
+export type ActionName = PlayerActionName | 'strike' | 'dodge' | 'parry';
 
 export interface ActiveAction {
   name: ActionName;
@@ -46,7 +46,7 @@ export interface ActiveAction {
   activeLen: number;
   recoveryLen: number;
   hasHit: boolean;
-  side: Side;
+  dir: Dir4;
   chargeTier: number;
   comboMult: number;
   comboEffect: ComboEffect | null;
@@ -71,6 +71,7 @@ export interface PlayerState {
   chargeTicks: number;
   charging: boolean;
   blocking: boolean;
+  dodgeDir: Dir4 | null;
   riposteWindow: number;
   stunTicks: number;
   focusTicks: number;
@@ -87,6 +88,8 @@ export interface EnemyState {
   maxHp: number;
   guard: number;
   guardMax: number;
+  guardDir: Dir4;
+  guardTimer: number;
   x: number;
   facing: number;
   phase: EnemyPhase;
@@ -113,6 +116,7 @@ export interface Projectile {
   x: number;
   vx: number;
   damage: number;
+  dir: Dir4;
   alive: boolean;
 }
 
@@ -122,6 +126,7 @@ export type SimEventKind =
   | 'parry'
   | 'block'
   | 'blockBreak'
+  | 'clang'
   | 'dodge'
   | 'guardBreak'
   | 'stagger'
@@ -136,6 +141,7 @@ export type SimEventKind =
   | 'projectile'
   | 'whiff'
   | 'focus'
+  | 'poison'
   | 'special';
 
 export interface SimEvent {
@@ -143,6 +149,7 @@ export interface SimEvent {
   readonly amount?: number;
   readonly crit?: boolean;
   readonly tell?: TellColour;
+  readonly dir?: Dir4;
   readonly label?: string;
   readonly x?: number;
 }

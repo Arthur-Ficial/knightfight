@@ -62,6 +62,8 @@ export const buildEnemy = (rung: number, rng: Rng): EnemyState => {
     name: prefix ? `${prefix} ${def.name}` : def.name,
     hp, maxHp: hp,
     guard: guardMax, guardMax,
+    guardDir: 'up',
+    guardTimer: Math.round(l.guardDwellBase),
     x: ARENA.enemyStartX,
     facing: -1,
     phase: 'idle',

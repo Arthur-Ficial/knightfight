@@ -1,3 +1,4 @@
+import type { Dir4 } from '../core/types.ts';
 import type { PlayerActionName } from './timings.ts';
 
 // All combat magnitudes. No damage/stamina/guard number may appear anywhere
@@ -29,15 +30,24 @@ export interface AttackStats {
   readonly reach: number;
 }
 
+// Directional strike stats. up = high cut (reach), down = low cut (guard break),
+// left/right = fast side jabs. Each pairs with STRIKE_TIMING of the same dir.
+export const STRIKE: Record<Dir4, AttackStats> = {
+  up: { damage: 12, stamina: 9, rageGain: 7, guardDamage: 16, reach: 50 },
+  down: { damage: 11, stamina: 10, rageGain: 7, guardDamage: 26, reach: 46 },
+  left: { damage: 8, stamina: 6, rageGain: 6, guardDamage: 9, reach: 46 },
+  right: { damage: 8, stamina: 6, rageGain: 6, guardDamage: 9, reach: 46 },
+};
+
 export const ATTACK: Record<PlayerActionName, AttackStats> = {
-  light: { damage: 7, stamina: 6, rageGain: 5, guardDamage: 6, reach: 46 },
   feint: { damage: 11, stamina: 8, rageGain: 7, guardDamage: 8, reach: 46 },
-  overhead: { damage: 18, stamina: 20, rageGain: 12, guardDamage: 22, reach: 50 },
-  sweep: { damage: 12, stamina: 16, rageGain: 10, guardDamage: 30, reach: 44 },
-  slash: { damage: 14, stamina: 12, rageGain: 9, guardDamage: 14, reach: 48 },
   heavy: { damage: 26, stamina: 24, rageGain: 16, guardDamage: 40, reach: 52 },
   whirlwind: { damage: 40, stamina: 0, rageGain: 0, guardDamage: 60, reach: 60 },
 };
+
+/** Hitting the guarded direction is largely absorbed; the open direction lands
+ *  full damage + full guard damage. This is the core directional read. */
+export const OPEN_HIT_BONUS = 1.15;
 
 /** Charge tier 0..3 multiplies heavy damage and guard damage. */
 export const CHARGE_TIER_DAMAGE = [1, 1.35, 1.8, 2.6] as const;

@@ -1,4 +1,5 @@
 import { TICK_MS } from '../core/loop.ts';
+import type { Dir4 } from '../core/types.ts';
 
 // Every timing in the game lives here, authored in milliseconds for human
 // readability and converted to exact 60Hz ticks. Nothing else may hardcode a
@@ -19,13 +20,18 @@ const action = (windupMs: number, activeMs: number, recoveryMs: number): ActionT
   recovery: msToTicks(recoveryMs),
 });
 
+// Directional strikes (tap zones). Each direction has its own feel: high/low
+// cuts are slower with more reach; side cuts are fast jabs.
+export const STRIKE_TIMING: Record<Dir4, ActionTiming> = {
+  up: action(120, 55, 190),
+  down: action(110, 55, 200),
+  left: action(70, 50, 140),
+  right: action(70, 50, 140),
+};
+
 export const PLAYER_TIMING = {
-  light: action(66, 50, 133),
   feint: action(50, 33, 166),
-  overhead: action(200, 66, 266),
-  sweep: action(133, 50, 233),
-  slash: action(100, 50, 200),
-  heavy: action(50, 83, 333),
+  heavy: action(60, 83, 320),
   whirlwind: action(100, 166, 400),
 } as const;
 

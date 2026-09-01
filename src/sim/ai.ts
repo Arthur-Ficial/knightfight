@@ -43,5 +43,5 @@ export const decideEnemy = (duel: DuelState): void => {
   e.timer = Math.max(3, Math.round(move.windup * e.telegraphMult));
   e.hasHit = false;
   e.willFeint = move.canFeint && chance(duel.rng, e.feintChance);
-  duel.events.push({ kind: 'telegraph', tell: move.tell, label: move.id, x: e.x });
+  duel.events.push({ kind: 'telegraph', tell: move.tell, dir: move.dir, label: move.id, x: e.x });
 };

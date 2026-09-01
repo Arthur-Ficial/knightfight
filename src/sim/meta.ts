@@ -27,7 +27,7 @@ export const createMeta = (): MetaState => ({
   eggsFound: [],
   combosFound: [],
   muted: false,
-  crt: true,
+  crt: false,
   bloodMoon: false,
   chickenKnight: false,
   reviveBankedDay: -1,
@@ -76,7 +76,9 @@ export const metaModBags = (meta: MetaState): ModBag[] => {
 };
 
 export const unlockedGestures = (meta: MetaState): Set<GestureUnlock> => {
-  const set = new Set<GestureUnlock>();
+  // Parry is core to the directional-defence read, so it is available from the
+  // start. Whirlwind and focus are still earned.
+  const set = new Set<GestureUnlock>(['parry']);
   for (const def of UPGRADES) {
     if (def.effect.kind === 'unlock' && rankOf(meta, def.id) > 0) {
       set.add(def.effect.gesture);

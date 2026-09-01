@@ -6,11 +6,29 @@ import {
   PROJECTILE_SPEED,
   PROJECTILE_DAMAGE,
   GUARD_REGEN,
+  LADDER,
 } from '../config/index.ts';
 import { clamp, sign } from '../core/math.ts';
+import { pick } from '../core/rng.ts';
+import { DIR4, type Dir4 } from '../core/types.ts';
 import { decideEnemy } from './ai.ts';
 import { resolveEnemyHit } from './defense.ts';
 import type { DuelState, EnemyState } from './state.ts';
+
+const guardDwell = (rung: number): number =>
+  Math.max(LADDER.guardDwellMin, Math.round(LADDER.guardDwellBase - LADDER.guardDwellPerRung * (rung - 1)));
+
+const shiftGuard = (duel: DuelState): void => {
+  const e = duel.enemy;
+  if (e.phase === 'staggered') {
+    return;
+  }
+  e.guardTimer -= 1;
+  if (e.guardTimer <= 0) {
+    e.guardDir = pick(duel.rng, DIR4.filter((d): d is Dir4 => d !== e.guardDir));
+    e.guardTimer = guardDwell(duel.rung);
+  }
+};
 
 // Enemy locomotion + finite-state machine. Telegraph -> (feint | active) ->
 // recovery -> idle. Movement only happens while idle so attacks are committed.
@@ -40,10 +58,10 @@ const faceAndMove = (duel: DuelState): void => {
   e.x = clamp(e.x, floor, ceil);
 };
 
-const fireProjectile = (duel: DuelState): void => {
+const fireProjectile = (duel: DuelState, attackDir: Dir4): void => {
   const e = duel.enemy;
-  const dir = duel.player.x < e.x ? -1 : 1;
-  duel.projectiles.push({ x: e.x, vx: dir * PROJECTILE_SPEED, damage: PROJECTILE_DAMAGE * e.damageMult, alive: true });
+  const vdir = duel.player.x < e.x ? -1 : 1;
+  duel.projectiles.push({ x: e.x, vx: vdir * PROJECTILE_SPEED, damage: PROJECTILE_DAMAGE * e.damageMult, dir: attackDir, alive: true });
   duel.events.push({ kind: 'projectile', x: e.x });
 };
 
@@ -63,9 +81,9 @@ const enterActive = (duel: DuelState): void => {
   e.phase = 'active';
   e.timer = e.move.active;
   e.hasHit = false;
-  duel.events.push({ kind: 'enemyAttack', x: e.x });
+  duel.events.push({ kind: 'enemyAttack', dir: e.move.dir, x: e.x });
   if (e.move.ranged) {
-    fireProjectile(duel);
+    fireProjectile(duel, e.move.dir);
     e.hasHit = true;
   }
 };
@@ -76,7 +94,7 @@ const resolveActiveHit = (duel: DuelState): void => {
     return;
   }
   if (Math.abs(e.x - duel.player.x) <= e.move.reach) {
-    resolveEnemyHit(duel, e.move.damage, e.move.tell);
+    resolveEnemyHit(duel, e.move.damage, e.move.tell, e.move.dir);
     e.hasHit = true;
   }
 };
@@ -117,6 +135,7 @@ const advancePhase = (duel: DuelState): void => {
 
 export const tickEnemy = (duel: DuelState): void => {
   faceAndMove(duel);
+  shiftGuard(duel);
   advancePhase(duel);
   const e = duel.enemy;
   if (e.phase === 'idle' && e.guard < e.guardMax) {

@@ -38,19 +38,23 @@ export type Direction =
   | 'downLeft'
   | 'downRight';
 
+/** The four cardinal directions - the shared language of strikes and guards. */
+export type Dir4 = 'up' | 'down' | 'left' | 'right';
+export const DIR4: readonly Dir4[] = ['up', 'down', 'left', 'right'];
+export const oppositeDir = (d: Dir4): Dir4 =>
+  d === 'up' ? 'down' : d === 'down' ? 'up' : d === 'left' ? 'right' : 'left';
+
 /**
  * The ONLY thing the sim ever receives from the player. The gesture recognizer
  * is the sole producer; the sim is the sole consumer. No DOM leaks across.
+ * Strikes and dodges are directional - that is the core read of the fight.
  */
 export type Intent =
-  | { readonly kind: 'light'; readonly side: Side }
+  | { readonly kind: 'strike'; readonly dir: Dir4 }
   | { readonly kind: 'feint' }
   | { readonly kind: 'chargeStart' }
   | { readonly kind: 'chargeRelease' }
-  | { readonly kind: 'dodge'; readonly dir: 'left' | 'right' }
-  | { readonly kind: 'overhead' }
-  | { readonly kind: 'sweep' }
-  | { readonly kind: 'slash'; readonly dir: Direction }
+  | { readonly kind: 'dodge'; readonly dir: Dir4 }
   | { readonly kind: 'parry' }
   | { readonly kind: 'blockStart' }
   | { readonly kind: 'blockEnd' }

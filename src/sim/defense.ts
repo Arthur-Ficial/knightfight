@@ -1,6 +1,7 @@
 import {
   PARRY_RAGE_GAIN,
   PARRY_STAGGER_TICKS,
+  RIPOSTE_WINDOW,
   HITSTOP,
   SLOWMO,
   BLOCK,
@@ -8,18 +9,28 @@ import {
   POISE_HIT,
   POISON,
 } from '../config/index.ts';
-import type { TellColour } from '../core/types.ts';
+import type { Dir4, TellColour } from '../core/types.ts';
 import { staggerEnemy, stunPlayer } from './effects.ts';
 import type { DuelState, PlayerState } from './state.ts';
 
-// Resolves an enemy strike landing on the player. This is where the timing game
-// lives: parry (gold/white only), block (chip, breaks on red), dodge i-frames,
-// and the punish for reading it wrong.
+// Resolves an enemy strike landing on the player. The read is colour + direction:
+// dodge the MATCHING direction to beat anything (incl. red) and open a riposte;
+// parry (gold/white) or block (white) as colour answers; wrong read = you eat it.
 
 const METRONOME_STREAK = 7;
 
 const isParrying = (p: PlayerState): boolean =>
   p.action !== null && p.action.name === 'parry' && p.action.phase === 'active';
+
+const dodgingMatch = (p: PlayerState, dir: Dir4): boolean =>
+  p.iframes > 0 && p.dodgeDir === dir;
+
+const onCleanDodge = (duel: DuelState, dir: Dir4): void => {
+  const p = duel.player;
+  p.riposteWindow = RIPOSTE_WINDOW;
+  duel.hitstop = Math.max(duel.hitstop, HITSTOP.light);
+  duel.events.push({ kind: 'dodge', dir, label: 'clean', x: p.x });
+};
 
 const onParry = (duel: DuelState): void => {
   const p = duel.player;
@@ -78,9 +89,10 @@ const applyHit = (duel: DuelState, damage: number): void => {
   }
 };
 
-export const resolveEnemyHit = (duel: DuelState, damage: number, tell: TellColour): void => {
+export const resolveEnemyHit = (duel: DuelState, damage: number, tell: TellColour, dir: Dir4): void => {
   const p = duel.player;
-  if (p.iframes > 0) {
+  if (dodgingMatch(p, dir)) {
+    onCleanDodge(duel, dir);
     return;
   }
   if (tell !== 'red' && isParrying(p)) {

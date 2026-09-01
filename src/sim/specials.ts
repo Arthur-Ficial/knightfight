@@ -13,6 +13,9 @@ const poisonTick = (duel: DuelState): void => {
   }
   p.hp -= POISON.dps;
   e.poisonOnPlayer -= 1;
+  if (e.poisonOnPlayer % 20 === 0) {
+    duel.events.push({ kind: 'poison', x: p.x });
+  }
   if (p.hp <= 0 && duel.outcome === 'fighting') {
     p.hp = 0;
     duel.outcome = 'lost';
@@ -47,9 +50,12 @@ const addsTick = (duel: DuelState): void => {
     return;
   }
   e.addTimer -= 1;
+  if (e.addTimer === 20) {
+    duel.events.push({ kind: 'telegraph', tell: 'gold', dir: 'down', label: 'hound', x: duel.player.x });
+  }
   if (e.addTimer <= 0) {
     e.addTimer = HOUND_INTERVAL;
-    resolveEnemyHit(duel, HOUND_DAMAGE, 'gold');
+    resolveEnemyHit(duel, HOUND_DAMAGE, 'gold', 'down');
   }
 };
 

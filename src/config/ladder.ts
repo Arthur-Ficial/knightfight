@@ -17,6 +17,11 @@ export const LADDER = {
   feintCap: 0.65,
   aggressionPerRung: 0.012,
   aggressionCap: 0.92,
+  /** How long the enemy holds a guard direction before shifting (ticks). Tightens
+   *  per rung toward a human-reaction floor - never unreadable. */
+  guardDwellBase: 54,
+  guardDwellPerRung: 1.1,
+  guardDwellMin: 20,
   /** Valor earned scales with rung reached. */
   valorPerRung: 8,
   valorFlat: 5,

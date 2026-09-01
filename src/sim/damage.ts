@@ -1,10 +1,12 @@
 import {
   ATTACK,
+  STRIKE,
   CHARGE_TIER_DAMAGE,
   CHARGE_GUARDBREAK_TIER,
   HITSTOP,
 } from '../config/index.ts';
 import { chance, type Rng } from '../core/rng.ts';
+import type { AttackStats } from '../config/combat.ts';
 import type { ActiveAction, EffectiveStats } from './state.ts';
 
 // Pure damage maths for a connecting player strike. No state mutation.
@@ -19,6 +21,11 @@ export interface DamageResult {
   readonly hitstop: number;
 }
 
+const statFor = (action: ActiveAction): AttackStats =>
+  action.name === 'strike' || action.name === 'dodge' || action.name === 'parry'
+    ? STRIKE[action.dir]
+    : ATTACK[action.name];
+
 const weightOf = (action: ActiveAction): number => {
   if (action.riposte) {
     return HITSTOP.parry;
@@ -26,10 +33,10 @@ const weightOf = (action: ActiveAction): number => {
   if (action.name === 'heavy' || action.name === 'whirlwind') {
     return HITSTOP.heavy;
   }
-  if (action.name === 'light' || action.name === 'feint') {
-    return HITSTOP.light;
+  if (action.dir === 'up' || action.dir === 'down') {
+    return HITSTOP.medium;
   }
-  return HITSTOP.medium;
+  return HITSTOP.light;
 };
 
 export const computePlayerDamage = (
@@ -37,10 +44,10 @@ export const computePlayerDamage = (
   stats: EffectiveStats,
   rng: Rng,
 ): DamageResult => {
-  const stat = ATTACK[action.name === 'dodge' || action.name === 'parry' ? 'light' : action.name];
+  const stat = statFor(action);
   const tierMult = action.name === 'heavy' ? (CHARGE_TIER_DAMAGE[action.chargeTier] ?? 1) : 1;
   let mult = stats.damageMult * action.comboMult * tierMult;
-  if (action.name === 'light' || action.name === 'feint') {
+  if (action.name === 'strike' || action.name === 'feint') {
     mult *= stats.lightMult;
   }
   if (action.name === 'heavy') {
