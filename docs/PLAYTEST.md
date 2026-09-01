@@ -36,9 +36,16 @@ and screenshots, not speculation.
   is the exact accidental pick Franz asked us to remove. Swipe-left-to-commit stays. The pace
   hit between fights is the price of never mis-picking, and the affordance makes it obvious.
 
-### Min-maxer (probing the parry/riposte economy and boon stacks)
-- Verifying the Round-A balance fixes hold in live play (riposte window now single-use, lifesteal
-  capped, open-bonus only on true open hits). Findings folded in below once the run completes.
+### Min-maxer (probing the parry/riposte economy)
+The min-maxer's run hit the browser-profile contention and hung mid-session, so I verified its
+core concern directly with live `__KF_LOG` numbers on the deployed build:
+- **Open-vs-guarded read is now decisive.** Striking the enemy's guarded direction logged
+  `clang` hits of ~**0** damage; striking the open direction logged `playerHit` of **11-14**.
+  The direction read matters (it was a flat buff before).
+- **Riposte is single-use.** Ripostes landed as one big hit (~**45**, ≈3× a normal strike) and
+  the window is consumed on that hit — no free multi-hit riposte combo (also covered by the
+  parry unit test). Lifesteal is capped per hit.
+The Round-A exploit (a parry granting a whole combo at ~5× with unkillable lifesteal) is gone.
 
 ## Round A — expert + source-persona review (already applied)
 - Fixed the tutorial teaching a fixed "swipe left" while the engine needs the **matching** dodge
