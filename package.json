@@ -30,6 +30,7 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
-    "@capacitor/core": "^6.2.0"
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.2"
   }
 }

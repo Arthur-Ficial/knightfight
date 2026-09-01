@@ -59,11 +59,18 @@ npm run selfplay    # headless balance report → docs/BALANCE.md
 ## iOS (Capacitor-ready)
 
 `base: './'`, everything bundled, no network calls, works offline. `capacitor.config.ts`
-is in place (`appId com.franzai.knightfight`, `webDir dist`). To wrap natively:
+is in place (`appId com.franzai.knightfight`, `webDir dist`), and `@capacitor/ios` is a
+dependency so the native platform adds without any extra install. To wrap natively:
 
 ```bash
-npm run build && npx cap add ios && npm run ios:sync
+npm run build && npm run ios:add && npm run ios:sync
+open ios/App/App.xcworkspace
 ```
+
+`ios/` is gitignored on purpose - the Xcode project is generated, not source. Regenerating it
+is one command. `ios:sync` runs `pod install`, so CocoaPods must be present
+(`brew install cocoapods`). Verified working 2026-09-01: platform adds, pods install, and
+the built game is copied into `ios/App/App/public`.
 
 ## Debugging
 
