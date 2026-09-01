@@ -47,6 +47,23 @@ export const PALETTE = {
   hp: '#c9433f',
   hpEnemy: '#b83b3b',
 
+  // Armour materials + two-tone lighting
+  steelLight: '#cdd6f0',
+  steelMid: '#8a93b5',
+  steelDark: '#3b4062',
+  ironDark: '#23263c',
+  leather: '#5a3d2b',
+  warmRim: '#ffb562',
+  coolFill: '#20264a',
+  contact: 'rgba(0,0,0,0.45)',
+  plume: '#d64b5a',
+  heraldGold: '#e8c56a',
+  plague: '#7bbf6a',
+  plagueDark: '#2f4a2a',
+  dread: '#7a1420',
+  fog: 'rgba(60,64,96,0.10)',
+  tower: '#14131f',
+
   // UI
   ink: '#f4f1e8',
   inkDim: '#b8b2a0',

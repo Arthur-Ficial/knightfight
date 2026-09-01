@@ -62,6 +62,10 @@ export const computePlayerPose = (p: PlayerState, tick: number): Pose => {
     return pose;
   }
   applyAttackPose(pose, a.phase, a.timer, a.windupLen, a.activeLen, a.recoveryLen);
+  if (a.name === 'heavy' && a.phase === 'windup') {
+    pose.crouch = Math.max(pose.crouch, 0.45);
+    pose.lean = Math.min(pose.lean, -0.35);
+  }
   return pose;
 };
 

@@ -25,6 +25,29 @@ const drawMoon = (ctx: CanvasRenderingContext2D, c: Circle, blood: boolean): voi
   ctx.fill();
 };
 
+const drawTower = (ctx: CanvasRenderingContext2D, x: number, top: number, w: number, h: number): void => {
+  ctx.fillStyle = PALETTE.tower;
+  ctx.fillRect(x - w / 2, top, w, h);
+  for (let i = -1; i <= 1; i += 1) {
+    ctx.fillRect(x + i * w * 0.35 - w * 0.12, top - w * 0.18, w * 0.24, w * 0.18);
+  }
+  ctx.fillStyle = PALETTE.torch1;
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(x - w * 0.12, top + h * 0.3, w * 0.24, w * 0.24);
+  ctx.globalAlpha = 1;
+};
+
+const drawFog = (ctx: CanvasRenderingContext2D, view: View, tick: number, y: number, speed: number): void => {
+  ctx.fillStyle = PALETTE.fog;
+  const off = (tick * speed) % (view.w + 200);
+  for (let i = -1; i < 3; i += 1) {
+    const x = i * (view.w * 0.7) + off - 100;
+    ctx.beginPath();
+    ctx.ellipse(x, y, view.w * 0.4, view.h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
+
 const drawWall = (ctx: CanvasRenderingContext2D, view: View): void => {
   const top = view.h * 0.28;
   ctx.fillStyle = PALETTE.stone0;
@@ -85,9 +108,12 @@ export const drawBackground = (ctx: CanvasRenderingContext2D, view: View, cos: C
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, view.w, view.h);
   drawMoon(ctx, moonCircle(view), cos.bloodMoon);
+  drawTower(ctx, view.w * 0.08, view.h * 0.12, view.w * 0.16, view.h * 0.2);
+  drawTower(ctx, view.w * 0.9, view.h * 0.08, view.w * 0.2, view.h * 0.24);
   drawWall(ctx, view);
   drawBanners(ctx, view);
   drawCrowd(ctx, view, tick);
+  drawFog(ctx, view, tick, view.groundY - view.h * 0.05, 0.25);
   drawTorch(ctx, view.w * 0.12, view.groundY - view.h * 0.12, tick);
   drawTorch(ctx, view.w * 0.88, view.groundY - view.h * 0.12, tick);
   const floor = ctx.createLinearGradient(0, view.groundY, 0, view.h);
@@ -95,4 +121,17 @@ export const drawBackground = (ctx: CanvasRenderingContext2D, view: View, cos: C
   floor.addColorStop(1, PALETTE.night1);
   ctx.fillStyle = floor;
   ctx.fillRect(0, view.groundY, view.w, view.h - view.groundY);
+};
+
+export const drawForeground = (ctx: CanvasRenderingContext2D, view: View, tick: number): void => {
+  drawFog(ctx, view, tick, view.h * 0.9, -0.4);
+  ctx.fillStyle = PALETTE.night0;
+  const base = view.h;
+  for (let x = -10; x < view.w + 30; x += 34) {
+    const h = view.h * 0.09 + Math.sin(x * 0.7) * view.h * 0.02;
+    ctx.beginPath();
+    ctx.arc(x, base + h - view.h * 0.02, 20, Math.PI, 0);
+    ctx.fill();
+    ctx.fillRect(x - 20, base, 40, 4);
+  }
 };
