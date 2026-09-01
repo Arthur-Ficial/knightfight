@@ -26,7 +26,8 @@ const faceAndMove = (duel: DuelState): void => {
   const dist = Math.abs(e.x - p.x);
   const speed = ENEMY_SPEED * e.tempo;
   if (e.approachBias < 0) {
-    if (dist < RANGED_KEEP) {
+    // Kite between shots, but once pinned in melee stop retreating and fight.
+    if (dist < RANGED_KEEP && dist > MELEE_CLOSE) {
       e.x += s * speed;
     } else if (dist > RANGED_KEEP + 40) {
       e.x -= s * speed;

@@ -18,8 +18,8 @@ export const PROJECTILE_DAMAGE = 12;
 
 /** Enemy locomotion. */
 export const ENEMY_SPEED = 1.15;
-/** Ranged enemies try to hold this centre-to-centre gap. */
-export const RANGED_KEEP = 120;
+/** Ranged enemies try to hold this centre-to-centre gap (closeable by lunges). */
+export const RANGED_KEEP = 100;
 /** Melee enemies close to within this gap before committing. */
 export const MELEE_CLOSE = 42;
 

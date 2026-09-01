@@ -15,9 +15,9 @@ export interface Skill {
 }
 
 export const SKILLS: readonly Skill[] = [
-  { name: 'novice', reactTicks: 3, defAccuracy: 0.5, parry: false, restBelow: 18 },
-  { name: 'decent', reactTicks: 4, defAccuracy: 0.78, parry: false, restBelow: 15 },
-  { name: 'expert', reactTicks: 6, defAccuracy: 0.95, parry: true, restBelow: 12 },
+  { name: 'novice', reactTicks: 2, defAccuracy: 0.42, parry: false, restBelow: 22 },
+  { name: 'decent', reactTicks: 4, defAccuracy: 0.74, parry: false, restBelow: 15 },
+  { name: 'expert', reactTicks: 6, defAccuracy: 0.96, parry: true, restBelow: 10 },
 ];
 
 const dodgeAwayFrom = (duel: DuelState): Intent => ({

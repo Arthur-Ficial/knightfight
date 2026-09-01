@@ -2,20 +2,21 @@
 // rung 10 needs real skill and rung 20+ is expert - without ever becoming unfair.
 
 export const LADDER = {
-  /** Enemy HP / guard / damage grow gently with distance past the intro rung. */
-  hpPerRung: 0.05,
-  guardPerRung: 0.04,
-  damagePerRung: 0.035,
+  /** Enemy HP / guard / damage grow with distance past the intro rung. Tuned so
+   *  rung 1-3 is easy, rung 10 needs real skill and rung 20+ is expert. */
+  hpPerRung: 0.085,
+  guardPerRung: 0.055,
+  damagePerRung: 0.1,
   /** Telegraphs shrink (attacks read faster) but never below the floor. */
-  telegraphShrinkPerRung: 0.012,
-  telegraphFloor: 0.55,
+  telegraphShrinkPerRung: 0.02,
+  telegraphFloor: 0.5,
   /** Attack tempo and feint probability rise with the rung. */
-  tempoPerRung: 0.008,
-  tempoCap: 1.6,
-  feintPerRung: 0.012,
-  feintCap: 0.6,
-  aggressionPerRung: 0.006,
-  aggressionCap: 0.85,
+  tempoPerRung: 0.013,
+  tempoCap: 1.7,
+  feintPerRung: 0.016,
+  feintCap: 0.65,
+  aggressionPerRung: 0.012,
+  aggressionCap: 0.92,
   /** Valor earned scales with rung reached. */
   valorPerRung: 8,
   valorFlat: 5,

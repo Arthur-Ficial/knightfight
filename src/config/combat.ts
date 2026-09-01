@@ -76,8 +76,9 @@ export const PARRY_STAGGER_TICKS = 42;
 export const COMBO_STEP_MULT = 0.12;
 export const COMBO_MAX_MULT = 2.4;
 
-/** Lunge forward (arena units) when an attack is thrown out of reach. */
-export const LUNGE_STEP = 10;
+/** Lunge forward (arena units) when an attack is thrown out of reach. Must let
+ *  the player close on a kiting ranged enemy faster than it can retreat. */
+export const LUNGE_STEP = 20;
 /** Sideways/backward travel of a dodge. */
 export const DODGE_STEP = 26;
 

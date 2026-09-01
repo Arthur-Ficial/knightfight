@@ -10,9 +10,12 @@ const movesFor = (e: EnemyState): readonly EnemyMove[] => {
   return def ? def.moves : [];
 };
 
-/** Pick an in-range move, weighted toward heavier hits when the player is open. */
+const RANGED_MIN_GAP = 62;
+
+/** Pick an in-range move. Ranged shots are only chosen at distance - a caught
+ *  ranged enemy must fight in melee, not fire point-blank (undodgeable) bolts. */
 export const chooseMove = (e: EnemyState, gap: number, rng: Rng): EnemyMove | null => {
-  const inRange = movesFor(e).filter((m) => m.reach >= gap);
+  const inRange = movesFor(e).filter((m) => m.reach >= gap && !(m.ranged && gap < RANGED_MIN_GAP));
   if (inRange.length === 0) {
     return null;
   }
