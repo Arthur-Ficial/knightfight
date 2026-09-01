@@ -15,8 +15,10 @@ export interface View {
 export const makeView = (w: number, h: number, shakeX: number, shakeY: number): View => ({
   w,
   h,
-  groundY: Math.round(h * 0.68),
-  knightScale: h / 720,
+  // Ground sits low so the fighters fill the centre of a portrait phone rather
+  // than floating high over a dead foreground; knights a touch larger to match.
+  groundY: Math.round(h * 0.78),
+  knightScale: h / 660,
   shakeX,
   shakeY,
 });
