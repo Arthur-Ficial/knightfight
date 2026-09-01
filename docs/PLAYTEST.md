@@ -1,60 +1,64 @@
-# Knightfight - Round 2 playtest
+# Knightfight — playtest
 
-Five agents reviewed the build: a **UX/UI designer**, a **retro game-feel** critic, and
-three **user-testers** (first-timer, impatient masher, min-maxer). Methodology: each played
-the game by reading the real source and reasoning as its persona (a shared browser was in use
-by the live-verification harness, so automated play would have collided; the sim/UI code is
-the ground truth for behaviour). Findings, what changed, and what was rejected below.
+Two rounds of review. **Round A** (design/UX experts + persona analysis of the source).
+**Round B** — the important one — three user-tester agents that **actually played the
+deployed build** through browser automation with synthetic pointer gestures, each in its own
+isolated `AGENT_BROWSER_SESSION` (this is how we escaped the shared-browser collision that
+blocked real play the first time). Findings below are from real play: `window.__KF_LOG` values
+and screenshots, not speculation.
 
-## Fixed (highest-impact first)
+## Round B — real play of the live build
 
-1. **BUG - the tutorial taught the wrong dodge.** *First-timer.* The wordless tutorial showed a
-   fixed "⇦ swipe left" and completed on any swipe, but the engine only counts a dodge that
-   MATCHES the incoming attack's direction - so the first defensive move it taught was the one
-   that gets you hit. Now `Tutorial.onTelegraph(dir)` shows the glyph for the live
-   `enemy.move.dir` and only completes on a matching dodge (`src/app/tutorial.ts`).
-2. **BUG - the riposte window was never consumed.** *Min-maxer.* A parry armed a 700ms window and
-   EVERY strike inside it got the 3.2x riposte mult, stacking with execution (1.4x) and a
-   mis-applied open-bonus (1.15x) ~ 5x base, plus uncapped lifesteal = unlosable. Now the window
-   is consumed on the first connecting riposte (one parry = one punish), `RIPOSTE_DAMAGE_MULT`
-   3.2->2.2, `EXECUTION_MULT` 1.4->1.35, `GUARDED_DAMAGE` 0.4->0.25 (the direction read matters
-   more), the open-bonus applies only to true open-direction strikes, and lifesteal is capped
-   per hit (`src/config/combat.ts`, `src/sim/resolve-player.ts`). Selfplay stays monotonic.
-3. **Slow-mo and haptics were dead code.** *Retro-fun.* `duel.slowmo` was decremented but never
-   slowed anything and `vibrate()` had no call site. Now the shell steps the sim at
-   `SLOWMO.factor` rate while slow-mo is active (kills/parries/Focus finally land) and every
-   meaningful hit fires a haptic pulse (`src/app/game.ts`, `src/app/feel.ts`).
-4. **Parry was locked from new players.** *Retro-fun.* The core directional-defence read needs
-   parry, so it is now unlocked by default; the meta node became "widen the window"
-   (`src/sim/meta.ts`, `src/config/meta.ts`).
-5. **Silent inputs felt broken while mashing.** *Impatient.* Taps dropped during recovery gave no
-   feedback. A `busy` cue now puffs at the player so a dropped tap reads as "still swinging,"
-   not "the game ignored me" (`src/sim/player-actions.ts`, renderer).
-6. **The guard chevron was near-invisible and looked like the attack chevron.** *First-timer.*
-   The guard mark is now a bright shield-bracket on a dark backing, visually distinct from the
-   bold filled attack arrow (`src/render/canvas2d/indicators.ts`).
-7. **Silent damage sources.** *Retro-fun.* Poison, hound bites and guarded "clang" hits now emit
-   events with sound so you know why you took damage.
-8. **UX polish** (UX/UI designer): curses are marked by colour + frame not the word "[rare]";
-   primary CTAs are bottom-anchored in the thumb zone; menus have a visible Back and never
-   scroll; the title paragraph became animated ghost-hand pictograms; the death-screen revive
-   instruction now matches the actual gesture.
+### First-timer (played rung 1→2, actually won and died)
+- **Confirmed working:** the boon anti-misfire is exactly right — a **tap only expands the
+  card's detail and commits nothing; a swipe-left takes it** and advanced rung 1→2. Directional
+  dodge fires and spends stamina as intended.
+- **Fixed - tutorial didn't protect the newcomer:** they lost ~90% HP on rung 1 before working
+  out that tapping strikes. The first-run tutorial now **freezes the enemy's offense during the
+  tap lesson** and only lets it telegraph gently during the dodge lesson, so you learn safely.
+- **Fixed - dodge timing unlearnable:** early telegraphs were too fast to react to. Rungs 1-2 now
+  telegraph ~45% slower.
+- **Fixed - death taught nothing:** an unblocked hit now flashes a fading red chevron showing the
+  dodge you should have made.
+- **Fixed - guard read illegible:** a guarded-direction strike now shows **BLOCKED** and a guard
+  break shows **BREAK!**, so hitting the open vs guarded side reads instantly.
+- **Composition (Franz's note + tester):** first pass over-corrected (fighters sank low). Final:
+  bigger fighters with the pair centred (~mid-screen), balanced headroom and foreground.
 
-## Rejected (with reasons)
+### Impatient masher (mashed taps, rushed menus, rage-tested)
+- **Fixed/mitigated - silent dropped inputs:** a tap dropped mid-swing now puffs a `busy` cue so
+  the input reads as received. (The core "spam loses to timing" rule stays by design - mashing
+  the same spot into a raised guard *should* fail; the cues now teach why instead of feeling
+  dead.)
+- **Fixed - "why am I dying":** the missed-dodge chevron + BLOCKED cue above address the
+  invisible-punishment complaint; the punish is now legible.
+- **Rejected - "let a tap take the boon / add a tap-to-revive button":** a tap committing a boon
+  is the exact accidental pick Franz asked us to remove. Swipe-left-to-commit stays. The pace
+  hit between fights is the price of never mis-picking, and the affordance makes it obvious.
 
-- **"Let a tap commit an already-focused boon" / lower the swipe threshold hard.** *Impatient.*
-  Rejected - a tap committing a boon is the exact accidental-pick Franz asked us to remove.
-  Swipe-left-only stays; the affordance and card-follows-finger drag make it discoverable.
-- **Remove double-tap -> feint so mashers get two strikes.** *Impatient.* Kept - feint is an
-  intentional gesture and only triggers on two fast taps in the SAME spot; the `busy` feedback
-  addresses the underlying "unresponsive" feeling without deleting a move.
-- **Require the parry to be directional too.** *Min-maxer.* Deferred - the single-use riposte +
-  multiplier cuts already de-fang the parry loop, and parry is now the new player's core defence;
-  making it directional as well risks over-punishing beginners. Flagged for future tuning.
-- **Hide the charge/parry tiles on the title until unlocked.** *First-timer.* Partly moot now that
-  parry is unlocked by default; charge is available from the start too. Only circle/pinch remain
-  earned and they are not shown on the title.
+### Min-maxer (probing the parry/riposte economy and boon stacks)
+- Verifying the Round-A balance fixes hold in live play (riposte window now single-use, lifesteal
+  capped, open-bonus only on true open hits). Findings folded in below once the run completes.
 
-## Not yet done (honest backlog)
-- A persistent in-fight legend for the white/gold/red tell colours (the wordless tutorial teaches
-  the dodge; the colour meaning is still learned by doing). Candidate for a future round.
+## Round A — expert + source-persona review (already applied)
+- Fixed the tutorial teaching a fixed "swipe left" while the engine needs the **matching** dodge
+  direction (now shows the live attack direction).
+- Fixed the never-consumed **riposte window** exploit (one parry = one punish; lower
+  riposte/execution/guarded multipliers; capped lifesteal; open-bonus only on true open strikes).
+- Made **slow-mo** and **haptics** actually fire (both were dead code); **parry unlocked** by
+  default (it's the core defensive read); poison/hound/clang now make sound.
+- UX: curses marked by colour+frame; bottom-anchored CTAs; no-scroll menus with a visible Back;
+  title = animated ghost-hand pictograms; corrected the revive instruction.
+
+## Rejected / deferred (with reasons)
+- **Tap-to-commit boons / valor** — rejected; reintroduces the accidental-pick misfire. Swipe only.
+- **Remove double-tap→feint** — kept; it only triggers on two fast taps in the same spot and the
+  `busy`/timing cues address the underlying "unresponsive" feeling.
+- **Directional parry (as well as directional dodge)** — deferred; the single-use riposte + the
+  multiplier cuts already de-fang the parry loop, and parry is the new player's core defence.
+
+## Method note
+Real play used isolated sessions (`AGENT_BROWSER_SESSION=tester1|2|3`). On this machine the
+sessions share one browser profile, so testers ran **sequentially**, not concurrently — but each
+genuinely drove the deployed game (taps/swipes on `#kf-canvas`, pointer drags on the `#kf-ui`
+DOM cards) and reported from observed `__KF_LOG` state and screenshots.
