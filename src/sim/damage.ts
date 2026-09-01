@@ -1,0 +1,67 @@
+import {
+  ATTACK,
+  CHARGE_TIER_DAMAGE,
+  CHARGE_GUARDBREAK_TIER,
+  HITSTOP,
+} from '../config/index.ts';
+import { chance, type Rng } from '../core/rng.ts';
+import type { ActiveAction, EffectiveStats } from './state.ts';
+
+// Pure damage maths for a connecting player strike. No state mutation.
+
+export interface DamageResult {
+  readonly damage: number;
+  readonly crit: boolean;
+  readonly guardDamage: number;
+  readonly guardBreak: boolean;
+  readonly stagger: boolean;
+  readonly launcher: boolean;
+  readonly hitstop: number;
+}
+
+const weightOf = (action: ActiveAction): number => {
+  if (action.riposte) {
+    return HITSTOP.parry;
+  }
+  if (action.name === 'heavy' || action.name === 'whirlwind') {
+    return HITSTOP.heavy;
+  }
+  if (action.name === 'light' || action.name === 'feint') {
+    return HITSTOP.light;
+  }
+  return HITSTOP.medium;
+};
+
+export const computePlayerDamage = (
+  action: ActiveAction,
+  stats: EffectiveStats,
+  rng: Rng,
+): DamageResult => {
+  const stat = ATTACK[action.name === 'dodge' || action.name === 'parry' ? 'light' : action.name];
+  const tierMult = action.name === 'heavy' ? (CHARGE_TIER_DAMAGE[action.chargeTier] ?? 1) : 1;
+  let mult = stats.damageMult * action.comboMult * tierMult;
+  if (action.name === 'light' || action.name === 'feint') {
+    mult *= stats.lightMult;
+  }
+  if (action.name === 'heavy') {
+    mult *= stats.heavyMult;
+  }
+  const crit = chance(rng, stats.critChance);
+  if (crit) {
+    mult *= stats.critMult;
+  }
+  if (action.riposte) {
+    mult *= stats.riposteMult;
+  }
+  const effect = action.comboEffect;
+  const bleed = stats.bleed + (effect?.bleed ? stats.bleed + 4 : 0);
+  return {
+    damage: stat.damage * mult + bleed,
+    crit,
+    guardDamage: stat.guardDamage * stats.guardMult * tierMult,
+    guardBreak: (effect?.guardBreak ?? false) || (action.name === 'heavy' && action.chargeTier >= CHARGE_GUARDBREAK_TIER),
+    stagger: effect?.stagger ?? false,
+    launcher: effect?.launcher ?? false,
+    hitstop: weightOf(action),
+  };
+};
