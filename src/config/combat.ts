@@ -100,6 +100,25 @@ export const PUNISH_MULT = 1.5;
 export const PLAYER_STUN_TICKS = 18;
 export const POISE_HIT = 18;
 
+/** Enemy directional counter: reading the player's wind-up and meeting the
+ *  strike on its own line. A successful counter deflects (no enemy damage) but
+ *  leaves the enemy exposed - it OPENS a riposte window for the player, so the
+ *  fight is a read-vs-read exchange, never an unbreakable wall. */
+export const COUNTER = {
+  /** The enemy only bothers to counter when the player is close enough to hit. */
+  range: 60,
+  /** How long the enemy holds the counter guard (ticks) once committed. */
+  holdTicks: 26,
+  /** Exposed recovery after a counter resolves or whiffs = the player's window. */
+  recoverTicks: 30,
+  /** The enemy cannot counter again during this cooldown - it guarantees the
+   *  punish window is real and stops counters chaining into an unbreakable wall. */
+  cooldownTicks: 26,
+  /** Later commit at low skill, earlier (more readable) at high skill. */
+  earliestProg: 0.15,
+  latestProg: 0.9,
+} as const;
+
 /** Plague Knight poison damage-over-time on the player. */
 export const POISON = {
   dps: 0.25,

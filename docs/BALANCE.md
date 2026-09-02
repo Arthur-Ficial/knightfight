@@ -5,11 +5,49 @@ The bot plays the real sim through the real intent surface - no shortcuts.
 
 | Skill | Avg rung | Min | Max | Timeouts | Combat deaths | Stamina-starved | Avg DPS |
 |---|---|---|---|---|---|---|---|
-| novice | 25.2 | 16 | 33 | 0 | 16 | 0% | 70.6 |
-| decent | 33.9 | 29 | 41 | 0 | 16 | 0% | 94.7 |
-| expert | 39.4 | 24 | 45 | 0 | 12 | 0% | 119.5 |
+| novice | 25.9 | 17 | 33 | 0 | 16 | 0% | 69.4 |
+| decent | 31.5 | 21 | 45 | 0 | 15 | 0% | 85.9 |
+| expert | 32.9 | 21 | 45 | 0 | 16 | 0% | 99.3 |
 
 ## Reading it
 - **Avg rung** should rise clearly with skill: novice clears the tutorial band, expert reaches the boss and beyond.
 - **Timeouts** flag unwinnable/too-tanky enemies. Zero is the goal.
 - **Stamina-starved** is the fraction of ticks the bot was too exhausted to act; a healthy fight sits low.
+
+## Directional attacks - the four shapes (one shared rig)
+
+The strike DIRECTION is carried by the skeleton itself. `src/render/canvas2d/attack.ts`
+holds the single source of truth; player and enemy run the SAME four motions,
+mirrored to facing. `up`/`down` are facing-independent; horizontal folds to
+forward/back relative to who is swinging.
+
+| Input (Dir4) | Player (faces +x) | Enemy (faces -x) | Motion |
+|---|---|---|---|
+| up | rising | rising | starts low behind the knee, uppercuts high through the body line |
+| down | overhead | overhead | raises fully over the helm, chops down the vertical |
+| right | thrust (forward) | backhand (back) | player lunges toward the foe; enemy winds back |
+| left | backhand (back) | thrust (forward) | player winds back; enemy lunges toward the player |
+
+The wind-up already tells the direction (rising coils LOW, overhead raises HIGH,
+thrust retracts to the ribs, backhand cocks behind the far shoulder), so the read
+is fair. Pose == telegraph chevron == the Dir4 the sim resolves the hit with.
+
+## Directional counters - the correct answer per line (Addendum 2)
+
+Enemies also DEFEND. During your wind-up the enemy reads your strike direction and,
+skill-gated, commits the matching counter from the SAME shared mapping the player
+uses to dodge (`counterDirForAttack`, identity - you meet an attack on its own
+line). Each counter is its own readable brace:
+
+| Your attack | Enemy counter pose |
+|---|---|
+| up (rising cut) | LOW parry |
+| down (overhead) | HIGH catch |
+| right (thrust) | SIDESTEP / deflect |
+| left (back sweep) | TURN IN to close |
+
+Skill scales with the rung (`counterSkill` per archetype in `config/enemies.ts`,
+ramped by `LADDER.counterPerRung`): low rungs counter rarely and read late or
+wrong; high rungs counter often and read early - the fight sharpens as you climb.
+A matched counter deflects your strike (no damage, you lose tempo) but leaves the
+enemy briefly exposed and unable to re-counter: a real punish window, never a wall.

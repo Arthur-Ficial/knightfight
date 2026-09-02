@@ -86,6 +86,10 @@ export const buildEnemy = (rung: number, rng: Rng): EnemyState => {
     willFeint: false,
     poisonOnPlayer: 0,
     addTimer: 90,
+    counterSkill: rung <= 2 ? 0 : Math.min(l.counterCap, def.counterSkill + l.counterPerRung * delta),
+    counterDir: null,
+    counterArmed: false,
+    counterCooldown: 0,
   };
 };
 
