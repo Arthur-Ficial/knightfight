@@ -6,21 +6,61 @@ import {
   PROJECTILE_SPEED,
   PROJECTILE_DAMAGE,
   GUARD_REGEN,
+  COUNTER,
   LADDER,
 } from '../config/index.ts';
 import { clamp, sign } from '../core/math.ts';
-import { pick } from '../core/rng.ts';
+import { chance, pick } from '../core/rng.ts';
 import { DIR4, type Dir4 } from '../core/types.ts';
 import { decideEnemy } from './ai.ts';
+import { counterDirForAttack } from './counter.ts';
 import { resolveEnemyHit } from './defense.ts';
 import type { DuelState, EnemyState } from './state.ts';
 
 const guardDwell = (rung: number): number =>
   Math.max(LADDER.guardDwellMin, Math.round(LADDER.guardDwellBase - LADDER.guardDwellPerRung * (rung - 1)));
 
+// Reads the player's wind-up and, skill-gated, commits a directional COUNTER on
+// the matching line (shared SSOT counterDirForAttack). Low skill reads late and
+// often wrong; high skill reads early and true. One read per player wind-up.
+const decideCounter = (duel: DuelState): void => {
+  const e = duel.enemy;
+  const p = duel.player;
+  const a = p.action;
+  const winding = a !== null && a.name === 'strike' && a.phase === 'windup';
+  if (!winding) {
+    e.counterArmed = false;
+    return;
+  }
+  if (e.counterArmed || e.counterSkill <= 0 || e.counterCooldown > 0 || (e.phase !== 'idle' && e.phase !== 'recovery')) {
+    return;
+  }
+  if (Math.abs(e.x - p.x) > COUNTER.range) {
+    return;
+  }
+  const prog = 1 - a.timer / Math.max(1, a.windupLen);
+  const reactPoint = COUNTER.latestProg - (COUNTER.latestProg - COUNTER.earliestProg) * e.counterSkill;
+  if (prog < reactPoint) {
+    return;
+  }
+  e.counterArmed = true; // one read per wind-up, whatever the outcome
+  if (!chance(duel.rng, e.counterSkill)) {
+    return;
+  }
+  const correct = counterDirForAttack(a.dir);
+  const dir = chance(duel.rng, e.counterSkill)
+    ? correct
+    : pick(duel.rng, DIR4.filter((d): d is Dir4 => d !== correct));
+  e.phase = 'counter';
+  e.counterDir = dir;
+  e.timer = COUNTER.holdTicks;
+  e.move = null;
+  duel.events.push({ kind: 'counter', dir, x: e.x });
+};
+
 const shiftGuard = (duel: DuelState): void => {
   const e = duel.enemy;
-  if (e.phase === 'staggered') {
+  if (e.phase === 'staggered' || e.phase === 'counter') {
     return;
   }
   e.guardTimer -= 1;
@@ -130,12 +170,25 @@ const advancePhase = (duel: DuelState): void => {
     case 'feint':
       if (e.timer <= 0) { e.phase = 'idle'; e.move = null; e.tell = null; e.cooldown = idleCooldown(e, 12); }
       return;
+    case 'counter':
+      // Held the guard but the strike never came (baited/feinted): exposed window.
+      if (e.timer <= 0) {
+        e.phase = 'recovery';
+        e.timer = COUNTER.recoverTicks;
+        e.counterDir = null;
+        e.counterCooldown = COUNTER.recoverTicks + COUNTER.cooldownTicks;
+      }
+      return;
   }
 };
 
 export const tickEnemy = (duel: DuelState): void => {
+  if (duel.enemy.counterCooldown > 0) {
+    duel.enemy.counterCooldown -= 1;
+  }
   faceAndMove(duel);
   shiftGuard(duel);
+  decideCounter(duel);
   advancePhase(duel);
   const e = duel.enemy;
   if (e.phase === 'idle' && e.guard < e.guardMax) {

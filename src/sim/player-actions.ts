@@ -16,6 +16,7 @@ import type { PlayerActionName } from '../config/timings.ts';
 import type { ComboToken } from '../config/combos.ts';
 import { clamp } from '../core/math.ts';
 import type { Dir4, Intent } from '../core/types.ts';
+import { logEvent } from '../core/log.ts';
 import { pushComboToken } from './combos.ts';
 import type { DuelState, PlayerState } from './state.ts';
 
@@ -64,6 +65,8 @@ const fireCombo = (duel: DuelState, token: ComboToken): { mult: number; effect: 
 const beginStrike = (duel: DuelState, dir: Dir4): void => {
   const p = duel.player;
   const t = STRIKE_TIMING[dir];
+  // Mark the raw directional input so __KF_LOG shows input dir -> resolved dir.
+  logEvent(duel.tick, 'input:strike', { dir });
   const c = fireCombo(duel, STRIKE_TOKEN[dir]);
   p.action = {
     name: 'strike', phase: 'windup', timer: t.windup, windupLen: t.windup, activeLen: t.active, recoveryLen: t.recovery,

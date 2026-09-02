@@ -1,12 +1,16 @@
-import { clamp01, easeOutCubic, lerp } from '../../core/math.ts';
+import { clamp01, lerp } from '../../core/math.ts';
 import { TICK_MS } from '../../core/loop.ts';
-import { CHARGE_MAX_MS } from '../../config/index.ts';
+import { CHARGE_MAX_MS, COUNTER } from '../../config/index.ts';
 import type { Dir4 } from '../../core/types.ts';
+import type { AttackPhase } from './attack.ts';
 import type { EnemyState, PlayerState } from '../../sim/state.ts';
 
-// Procedural animation: turn a fighter's sim state into weighty pose parameters
-// (anticipation on windup, follow-through on recovery, recoil on hit). attackDir
-// biases the arm high/low/side so the strike direction is visible.
+// Procedural animation: turn a fighter's sim state into weighty pose parameters.
+// The ambient fields (bob/guard/hurt/charge/stride) drive idle + defence. When a
+// directional strike is live, attackDir + attackPhase + attackProg are set and
+// knight.ts drives the skeleton through the SHARED directional rig (attack.ts) -
+// the same four motions for player and enemy, so the pose ALWAYS matches the
+// telegraph/indicator direction.
 
 export interface Pose {
   bob: number;
@@ -19,6 +23,11 @@ export interface Pose {
   charge: number;
   active: boolean;
   attackDir: Dir4 | null;
+  attackPhase: AttackPhase | null;
+  attackProg: number;
+  /** Non-null while the fighter holds a directional counter brace (the answer to
+   *  the opponent's attack on that line). Drives the defensive rig. */
+  counterDir: Dir4 | null;
 }
 
 const base = (tick: number): Pose => ({
@@ -32,7 +41,13 @@ const base = (tick: number): Pose => ({
   charge: 0,
   active: false,
   attackDir: null,
+  attackPhase: null,
+  attackProg: 0,
+  counterDir: null,
 });
+
+/** Fraction 0..1 through a countdown phase (timer runs len -> 0). */
+const phaseProg = (timer: number, len: number): number => clamp01(1 - timer / Math.max(1, len));
 
 export const computePlayerPose = (p: PlayerState, tick: number): Pose => {
   const pose = base(tick);
@@ -64,67 +79,67 @@ export const computePlayerPose = (p: PlayerState, tick: number): Pose => {
     pose.swing = -0.2;
     return pose;
   }
-  applyAttackPose(pose, a.phase, a.timer, a.windupLen, a.activeLen, a.recoveryLen);
   if (a.name === 'strike' || a.name === 'heavy') {
     pose.attackDir = a.dir;
+    pose.attackPhase = a.phase;
+    pose.attackProg = phaseProg(a.timer, a.phase === 'windup' ? a.windupLen : a.phase === 'active' ? a.activeLen : a.recoveryLen);
+    pose.active = a.phase === 'active';
+    return pose;
   }
-  if (a.name === 'heavy' && a.phase === 'windup') {
-    pose.crouch = Math.max(pose.crouch, 0.45);
-    pose.lean = Math.min(pose.lean, -0.35);
-  }
+  // feint / whirlwind: a non-directional flourish keeps the old single arc.
+  applyFlourish(pose, a.phase, a.timer, a.windupLen, a.activeLen, a.recoveryLen);
   return pose;
 };
 
-const applyAttackPose = (
-  pose: Pose,
-  phase: string,
-  timer: number,
-  windupLen: number,
-  activeLen: number,
-  recoveryLen: number,
+const applyFlourish = (
+  pose: Pose, phase: string, timer: number, windupLen: number, activeLen: number, recoveryLen: number,
 ): void => {
   if (phase === 'windup') {
-    const prog = 1 - timer / Math.max(1, windupLen);
+    const prog = phaseProg(timer, windupLen);
     pose.swing = -0.5 * prog;
     pose.lean = -0.3 * prog;
-    pose.crouch = 0.15 * prog;
   } else if (phase === 'active') {
-    const prog = easeOutCubic(1 - timer / Math.max(1, activeLen));
+    const prog = phaseProg(timer, activeLen);
     pose.swing = lerp(-0.5, 1, prog);
     pose.lean = lerp(-0.3, 0.6, prog);
     pose.active = true;
   } else {
-    const prog = 1 - timer / Math.max(1, recoveryLen);
-    pose.swing = 1 - 0.25 * prog;
+    const prog = phaseProg(timer, recoveryLen);
+    pose.swing = 1 - 0.75 * prog;
     pose.lean = 0.4 * (1 - prog);
   }
 };
 
 export const computeEnemyPose = (e: EnemyState, tick: number): Pose => {
   const pose = base(tick);
-  const total = e.move ? Math.max(1, e.move.windup * e.telegraphMult) : 1;
-  if (e.move !== null && (e.phase === 'telegraph' || e.phase === 'active')) {
-    pose.attackDir = e.move.dir;
+  if (e.phase === 'counter' && e.counterDir !== null) {
+    pose.counterDir = e.counterDir;
+    pose.attackProg = phaseProg(e.timer, COUNTER.holdTicks);
+    return pose;
   }
-  if (e.phase === 'telegraph') {
-    const prog = clamp01(1 - e.timer / total);
-    pose.swing = -0.6 * prog;
-    pose.lean = -0.35 * prog;
-    pose.crouch = 0.2 * prog;
-  } else if (e.phase === 'active') {
-    const prog = easeOutCubic(1 - e.timer / Math.max(1, e.move ? e.move.active : 1));
-    pose.swing = lerp(-0.6, 1, prog);
-    pose.lean = lerp(-0.35, 0.7, prog);
-    pose.active = true;
-  } else if (e.phase === 'recovery') {
-    pose.swing = 0.7;
-    pose.lean = 0.2;
-  } else if (e.phase === 'staggered') {
+  const m = e.move;
+  if (m !== null && (e.phase === 'telegraph' || e.phase === 'active' || e.phase === 'recovery')) {
+    pose.attackDir = m.dir;
+    if (e.phase === 'telegraph') {
+      pose.attackPhase = 'windup';
+      pose.attackProg = phaseProg(e.timer, Math.max(1, m.windup * e.telegraphMult));
+    } else if (e.phase === 'active') {
+      pose.attackPhase = 'active';
+      pose.attackProg = phaseProg(e.timer, m.active);
+      pose.active = true;
+    } else {
+      pose.attackPhase = 'recovery';
+      pose.attackProg = phaseProg(e.timer, m.recovery);
+    }
+    return pose;
+  }
+  if (e.phase === 'staggered') {
     pose.hurt = 1;
     pose.lean = -0.5;
     pose.crouch = 0.3;
   } else if (e.phase === 'feint') {
     pose.swing = -0.25;
+    pose.lean = -0.2;
   } else {
     pose.stride = Math.sin(tick * 0.16);
   }

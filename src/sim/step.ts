@@ -22,9 +22,13 @@ const drainJuiceOnly = (duel: DuelState): void => {
 
 const logTick = (duel: DuelState): void => {
   for (const ev of duel.events) {
+    // dir is the whole read of the fight: it lets __KF_LOG prove that the strike
+    // input, the telegraph, the animation clip and the resolved hit all agree.
     logEvent(duel.tick, ev.kind, {
       amount: ev.amount ?? 0,
       label: ev.label ?? '',
+      ...(ev.dir !== undefined ? { dir: ev.dir } : {}),
+      ...(ev.tell !== undefined ? { tell: ev.tell } : {}),
     });
   }
   if (duel.tick % 60 === 0) {

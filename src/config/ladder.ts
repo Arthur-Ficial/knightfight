@@ -17,6 +17,11 @@ export const LADDER = {
   feintCap: 0.65,
   aggressionPerRung: 0.012,
   aggressionCap: 0.92,
+  /** Enemy counter skill rises with the rung: low rungs rarely counter and read
+   *  the direction late or wrong, high rungs counter often and read early. This
+   *  is what makes the fight feel sharper as the player climbs. */
+  counterPerRung: 0.016,
+  counterCap: 0.66,
   /** How long the enemy holds a guard direction before shifting (ticks). Tightens
    *  per rung toward a human-reaction floor - never unreadable. */
   guardDwellBase: 54,

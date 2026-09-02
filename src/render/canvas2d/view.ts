@@ -15,10 +15,10 @@ export interface View {
 export const makeView = (w: number, h: number, shakeX: number, shakeY: number): View => ({
   w,
   h,
-  // Bigger fighters, feet low enough that the PAIR is centred (~mid-screen) with
-  // balanced headroom/foreground - not floating high, not sunk to the bottom.
-  groundY: Math.round(h * 0.67),
-  knightScale: h / 470,
+  // Feet in the lower third so the fighters own the frame and the bottom is not a
+  // dead flat band. Headroom stays for the overhead wind-up (weapon above helm).
+  groundY: Math.round(h * 0.79),
+  knightScale: h / 500,
   shakeX,
   shakeY,
 });

@@ -27,6 +27,24 @@ There are **no on-screen buttons**. Everything is a gesture.
 Read the enemy's **tell**: a wind-up pose and a shrinking ring coloured
 **white** (blockable), **gold** (parryable) or **red** (unblockable — you must dodge).
 
+### Directional attacks — the pose IS the direction
+
+The direction you strike is drawn into the animated skeleton itself, not just an
+indicator. Four instantly-readable shapes, and enemies use the **same four**,
+mirrored to their facing (one shared rig — `src/render/canvas2d/attack.ts`):
+
+| Direction | Motion |
+|---|---|
+| **Up** | **Rising** cut — coils low behind the knee, uppercuts high through the body |
+| **Down** | **Overhead** — raises fully over the helm, then chops down the vertical |
+| **Forward** (toward the foe) | **Thrust / lunge** — retracts to the ribs, then extends the whole body forward |
+| **Back** (away) | **Backhand** — steps back, cocks behind the far shoulder, sweeps across |
+
+The wind-up already tells the direction, so the fight is fair. Enemies also
+**counter** on the matching line — a **low parry** to a rising cut, a **high catch**
+to an overhead, a **sidestep** to a thrust, a **turn-in** to a back sweep — and read
+you sharper the higher you climb. Full tables in [`docs/BALANCE.md`](docs/BALANCE.md).
+
 Chain gestures inside the rhythm window to discover **named combos** (see the Combo Codex).
 Kill an enemy → pick 1 of 3 **boons** → a new, harder enemy walks in. Death earns **Valor**
 for the permanent upgrade tree — where you unlock the parry, whirlwind and focus gestures.

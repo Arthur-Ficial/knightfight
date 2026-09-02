@@ -10,9 +10,11 @@ import {
   EXECUTION_MULT,
   OPEN_HIT_BONUS,
   LIFESTEAL_CAP,
+  COUNTER,
 } from '../config/index.ts';
 import { chance } from '../core/rng.ts';
 import { clamp } from '../core/math.ts';
+import type { Dir4 } from '../core/types.ts';
 import { computePlayerDamage, type DamageResult } from './damage.ts';
 import { staggerEnemy } from './effects.ts';
 import type { ActiveAction, DuelState } from './state.ts';
@@ -109,6 +111,40 @@ const applyToEnemy = (duel: DuelState, res: DamageResult, blocked: boolean): voi
   finishHit(duel, res, a, res.damage * (executing ? EXECUTION_MULT : 1) * openBonus);
 };
 
+// A committed counter that MATCHES the strike direction deflects it: no damage,
+// the player's swing is spent into recovery. But the counter has follow-through -
+// the enemy is left in an exposed recovery the player recovers in time to punish.
+// That exposed window is the opening that keeps it a read-vs-read fight, not a
+// wall (Addendum 2d): the enemy does NOT get a free hit off its own counter.
+const resolveCounter = (duel: DuelState, dir: Dir4): void => {
+  const { player: p, enemy: e } = duel;
+  const a = p.action;
+  if (a !== null) {
+    a.phase = 'recovery';
+    a.timer = a.recoveryLen;
+  }
+  e.phase = 'recovery';
+  e.timer = COUNTER.recoverTicks;
+  e.counterDir = null;
+  e.counterCooldown = COUNTER.recoverTicks + COUNTER.cooldownTicks;
+  // NOTE: guard is left intact - the deflected strike costs the player tempo. The
+  // window is that the enemy is briefly non-attacking and cannot re-counter; the
+  // player still has to read the open side to punish. Not a free hit, but a fight.
+  duel.hitstop = Math.max(duel.hitstop, HITSTOP.parry);
+  duel.shake = Math.max(duel.shake, 5);
+  duel.events.push({ kind: 'counter', dir, x: e.x });
+};
+
+// Countered on the WRONG line: the enemy is caught wrong-footed and wide open.
+const breakCounter = (duel: DuelState): void => {
+  const e = duel.enemy;
+  e.counterDir = null;
+  e.phase = 'recovery';
+  e.timer = COUNTER.recoverTicks;
+  e.counterCooldown = COUNTER.recoverTicks + COUNTER.cooldownTicks;
+  e.guard = 0;
+};
+
 export const resolvePlayerAttack = (duel: DuelState): void => {
   const a = duel.player.action;
   const e = duel.enemy;
@@ -122,6 +158,15 @@ export const resolvePlayerAttack = (duel: DuelState): void => {
     return;
   }
   a.hasHit = true;
+  if (e.phase === 'counter' && e.counterDir !== null) {
+    if (e.counterDir === a.dir) {
+      resolveCounter(duel, a.dir);
+      return;
+    }
+    breakCounter(duel);
+    applyToEnemy(duel, computePlayerDamage(a, duel.player.stats, duel.rng), false);
+    return;
+  }
   if (mirrorParried(duel)) {
     return;
   }

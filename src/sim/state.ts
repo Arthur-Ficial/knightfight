@@ -9,7 +9,7 @@ import type { GestureUnlock } from '../config/meta.ts';
 // (state, intents) so seed + intent log fully determines a fight.
 
 export type ActionPhase = 'windup' | 'active' | 'recovery';
-export type EnemyPhase = 'idle' | 'telegraph' | 'active' | 'recovery' | 'staggered' | 'feint';
+export type EnemyPhase = 'idle' | 'telegraph' | 'active' | 'recovery' | 'staggered' | 'feint' | 'counter';
 export type Outcome = 'fighting' | 'won' | 'lost';
 
 /** Resolved player stats after boons + meta upgrades are applied. */
@@ -110,6 +110,14 @@ export interface EnemyState {
   willFeint: boolean;
   poisonOnPlayer: number;
   addTimer: number;
+  /** Base counter skill (0..1), scaled per rung. */
+  counterSkill: number;
+  /** The direction the enemy is countering in, or null when not countering. */
+  counterDir: Dir4 | null;
+  /** One counter read per player wind-up: set on attempt, cleared when it ends. */
+  counterArmed: boolean;
+  /** Ticks until the enemy may counter again (guarantees the punish window). */
+  counterCooldown: number;
 }
 
 export interface Projectile {
@@ -135,6 +143,7 @@ export type SimEventKind =
   | 'chargeRelease'
   | 'telegraph'
   | 'enemyAttack'
+  | 'counter'
   | 'feint'
   | 'kill'
   | 'death'
